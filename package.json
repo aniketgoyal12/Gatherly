@@ -1,0 +1,25 @@
+{
+  "name": "gatherly",
+  "version": "0.1.0",
+  "description": "AI-powered event planning and management platform",
+  "private": true,
+  "scripts": {
+    "setup": "node -e \"const { spawnSync } = require('child_process'); const isWin = process.platform === 'win32'; const cmd = isWin ? 'powershell' : 'bash'; const args = isWin ? ['-ExecutionPolicy', 'Bypass', '-File', './scripts/setup-hooks.ps1'] : ['./scripts/setup-hooks.sh']; const res = spawnSync(cmd, args, { stdio: 'inherit' }); process.exit(res.status || 0);\"",
+    "pull": "node -e \"const { spawnSync } = require('child_process'); const isWin = process.platform === 'win32'; const cmd = isWin ? 'powershell' : 'bash'; const args = isWin ? ['-ExecutionPolicy', 'Bypass', '-File', './scripts/pull.ps1'] : ['./scripts/pull.sh']; const res = spawnSync(cmd, args, { stdio: 'inherit' }); process.exit(res.status || 0);\"",
+    "sync-log": "node -e \"const { spawnSync } = require('child_process'); const isWin = process.platform === 'win32'; const cmd = isWin ? 'powershell' : 'bash'; const args = isWin ? ['-ExecutionPolicy', 'Bypass', '-File', './scripts/sync-log.ps1'] : ['./scripts/sync-log.sh']; const res = spawnSync(cmd, args, { stdio: 'inherit' }); process.exit(res.status || 0);\"",
+    "seed": "npm run seed --prefix backend",
+    "dev:server": "npm run dev --prefix backend",
+    "dev:client": "npm run dev --prefix frontend",
+    "test:server": "npm test --prefix backend"
+  },
+  "keywords": [
+    "event-management",
+    "mern",
+    "fastapi",
+    "razorpay",
+    "qr-ticketing",
+    "socket-io"
+  ],
+  "author": "Gatherly Team",
+  "license": "ISC"
+}

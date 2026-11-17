@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Git post-merge hook for Gatherly
+# Invoked automatically by `git pull`
+
+echo "\n[Gatherly Hook] Running post-merge sync logger..."
+
+# Detect environment and invoke appropriate sync logger
+if command -v bash >/dev/null 2>&1; then
+  bash ./scripts/sync-log.sh
+elif command -v pwsh >/dev/null 2>&1; then
+  pwsh -ExecutionPolicy Bypass -File ./scripts/sync-log.ps1
+elif command -v powershell >/dev/null 2>&1; then
+  powershell -ExecutionPolicy Bypass -File ./scripts/sync-log.ps1
+else
+  echo "[Gatherly Hook] No bash or PowerShell found to run sync logger."
+fi
