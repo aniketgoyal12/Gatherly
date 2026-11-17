@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-950: #080D1A;
+  --color-navy-900: #0D1527;
+  --color-navy-800: #141F36;
+  --color-navy-700: #1E2D4C;
+  --color-navy-600: #2C3F66;
+  --color-navy-500: #3E568A;
+  --color-navy-400: #6279AC;
+  --color-navy-300: #8FA2CB;
+  --color-navy-200: #C2CEE5;
+  --color-navy-100: #E4EAF4;
+  --color-navy-50: #F2F5FA;
+
+  --color-cream-50: #FFFFFF;
+  --color-cream-100: #FDFBF7;
+  --color-cream-200: #F7F3E9;
+  --color-cream-300: #EEE7D7;
+  --color-cream-400: #DFD5BF;
+  --color-cream-500: #C8B99D;
+  --color-cream-600: #A89676;
+
+  --color-coral-50: #FFF5F4;
+  --color-coral-100: #FFE6E3;
+  --color-coral-200: #FFCCC7;
+  --color-coral-300: #FFA397;
+  --color-coral-400: #FF8273;
+  --color-coral-500: #FF6B5B;
+  --color-coral-600: #E5503F;
+  --color-coral-700: #C63727;
+  --color-coral-800: #A5291C;
+  --color-coral-900: #7C1C12;
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-cream-100);
+  color: var(--color-navy-900);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

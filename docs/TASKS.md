@@ -23,7 +23,7 @@
 | [x] | `TSK-S1-07` | Create `.env.example` templates and author environment onboarding guide in `ENV_SETUP.md` | Backend Lead | M | Done | `docs/env-setup` | [#7](https://github.com/gatherly/gatherly/pull/7) |
 | [x] | `TSK-S1-08` | Scaffold Express 5 server with Helmet, rate limiting, and MongoDB connection helper | Backend Lead | M | Done | `feat/server-scaffold` | [#8](https://github.com/gatherly/gatherly/pull/8) |
 | [x] | `TSK-S1-09` | Bootstrap Python FastAPI microservice with Pydantic models and Uvicorn runner | AI/ML Lead | M | Done | `feat/ai-scaffold` | [#9](https://github.com/gatherly/gatherly/pull/9) |
-| [ ] | `TSK-S1-10` | Bootstrap React 18 + Vite + Tailwind CSS SPA with base layout and router | Frontend Lead | H | In Review | `feat/client-scaffold` | [#10](https://github.com/gatherly/gatherly/pull/10) |
+| [ ] | `TSK-S1-10` | Bootstrap React 18 + Vite + Tailwind CSS SPA with base layout and router | Frontend Lead | H | In Review | `feature/frontend-setup` | [PR Pending](https://github.com/aniketgoyal12/Gatherly/pulls) |
 | [ ] | `TSK-S1-11` | Register Razorpay test gateway account and verify webhook signing secret format | Integrations Lead | M | In Review | `chore/razorpay-creds` | [#11](https://github.com/gatherly/gatherly/pull/11) |
 | [ ] | `TSK-S1-12` | Review and merge Sprint 1 deliverables; run verification sprint retro | All Team | M | In Progress | `release/sprint-1-wrap` | PR Pending |
 
