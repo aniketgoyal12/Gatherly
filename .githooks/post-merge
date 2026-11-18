@@ -2,7 +2,7 @@
 # Git post-merge hook for Gatherly
 # Invoked automatically by `git pull`
 
-echo "\n[Gatherly Hook] Running post-merge sync logger..."
+printf "\n[Gatherly Hook] Running post-merge sync logger...\n"
 
 # Detect environment and invoke appropriate sync logger
 if command -v bash >/dev/null 2>&1; then

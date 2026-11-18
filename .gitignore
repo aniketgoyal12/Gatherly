@@ -7,11 +7,12 @@ vendor/
 .env.*
 !.env.example
 
-# Build outputs
+# Build outputs & local media uploads
 dist/
 build/
 out/
 .next/
+uploads/
 
 # Testing & Coverage
 coverage/

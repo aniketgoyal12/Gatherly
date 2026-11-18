@@ -7,7 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node src/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:api": "node tests/e2e-api-test.js",
+    "test": "node tests/e2e-api-test.js"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
   "type": "module",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.10",
@@ -24,6 +26,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.12.1",
     "morgan": "^1.12.1",
+    "multer": "^2.5.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

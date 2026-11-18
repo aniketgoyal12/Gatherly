@@ -152,20 +152,22 @@ BULLETS=""
 
 HISTORY_ENTRY="\n### Sync Entry: $NOW_IST (\`$BRANCH\`)\n- **Puller:** $PULLER\n- **Commit Range:** \`$SHORT_OLD...$SHORT_NEW\` ($COMMIT_COUNT commits)\n- **Authors:** $AUTHORS\n\n| Date / Time | Puller | Branch | Commits Pulled | Authors | Summary of Changes | Files Added | Files Modified | Files Deleted | Docs Updated? |\n| :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |\n| $TIMESTAMP | $PULLER | \`$BRANCH\` | $COMMIT_COUNT | $AUTHORS | $SUMMARIES | $ADDED_COUNT | $MODIFIED_COUNT | $DELETED_COUNT | $DOCS_UPDATED |\n\n#### What's New in This Sync\n${BULLETS}\n"
 
-# 7. Update docs/SYNC_LOG.md via node or python helper
+# 7. Update docs/SYNC_LOG.md via node (using env vars so backticks/quotes never break JS syntax)
 SYNC_LOG_PATH="docs/SYNC_LOG.md"
 if [ -f "$SYNC_LOG_PATH" ]; then
-  # Use node for cross-platform regex replacement
-  node -e "
-    const fs = require('fs');
-    const path = '$SYNC_LOG_PATH';
-    let content = fs.readFileSync(path, 'utf8');
-    const latestBlock = \`$LATEST_BLOCK\`;
-    const historyEntry = \`$HISTORY_ENTRY\`;
-    content = content.replace(/<!-- LATEST_SYNC_START -->[\\s\\S]*?<!-- LATEST_SYNC_END -->/, latestBlock);
-    content = content.replace(/(<!-- SYNC_HISTORY_START -->)/, '\$1\n' + historyEntry);
-    fs.writeFileSync(path, content, 'utf8');
-  "
+  LATEST_BLOCK="$(printf '%b' "$LATEST_BLOCK")" \
+  HISTORY_ENTRY="$(printf '%b' "$HISTORY_ENTRY")" \
+  SYNC_LOG_PATH="$SYNC_LOG_PATH" \
+  node -e '
+    const fs = require("fs");
+    const filePath = process.env.SYNC_LOG_PATH;
+    let content = fs.readFileSync(filePath, "utf8");
+    const latestBlock = process.env.LATEST_BLOCK || "";
+    const historyEntry = process.env.HISTORY_ENTRY || "";
+    content = content.replace(/<!-- LATEST_SYNC_START -->[\s\S]*?<!-- LATEST_SYNC_END -->/, () => latestBlock);
+    content = content.replace(/(<!-- SYNC_HISTORY_START -->)/, (_, marker) => marker + "\n" + historyEntry);
+    fs.writeFileSync(filePath, content, "utf8");
+  '
   echo "[sync-log] docs/SYNC_LOG.md updated successfully."
 else
   echo "[sync-log] Warning: $SYNC_LOG_PATH not found."

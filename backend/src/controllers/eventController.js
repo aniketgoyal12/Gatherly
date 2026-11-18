@@ -7,6 +7,7 @@ import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { emitToRoom } from '../config/socket.js';
+import { uploadBufferToCloudinary, deleteFromCloudinary } from '../config/cloudinary.js';
 
 /**
  * Public Discovery: Search & Filter Events (Workflow 5)
@@ -304,6 +305,56 @@ export const completeEvent = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, { event }, 'Event marked as completed. Feedback requests dispatched.'));
 });
 
+/**
+ * Upload or Replace Event Banner Image (Cloudinary / Local Dev Fallback)
+ */
+export const uploadEventBanner = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const event = await Event.findById(id);
+  if (!event) {
+    throw new ApiError(404, 'Event not found');
+  }
+
+  // Ownership check (Organizer who owns event or Super Admin)
+  if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not have permission to update this event banner');
+  }
+
+  if (!req.file) {
+    throw new ApiError(400, "No image file provided. Upload an image using multipart field 'banner'.");
+  }
+
+  const uploaded = await uploadBufferToCloudinary(req.file.buffer, {
+    folder: 'gatherly/events',
+    originalName: req.file.originalname,
+  });
+
+  // Clean up previous banner asset if one already existed
+  if (event.bannerPublicId) {
+    await deleteFromCloudinary(event.bannerPublicId).catch(() => {});
+  }
+
+  event.bannerUrl = uploaded.url;
+  event.bannerPublicId = uploaded.publicId;
+  await event.save();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        event,
+        upload: {
+          bannerUrl: uploaded.url,
+          publicId: uploaded.publicId,
+          storage: uploaded.storage,
+        },
+      },
+      'Event banner uploaded successfully'
+    )
+  );
+});
+
 export default {
   getEvents,
   getEventById,
@@ -313,4 +364,5 @@ export default {
   reviewEvent,
   cancelEvent,
   completeEvent,
+  uploadEventBanner,
 };

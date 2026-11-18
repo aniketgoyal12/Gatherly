@@ -8,6 +8,7 @@ import {
   reviewEvent,
   cancelEvent,
   completeEvent,
+  uploadEventBanner,
 } from '../controllers/eventController.js';
 import {
   setBudget,
@@ -17,6 +18,7 @@ import {
 import { protect } from '../middleware/authMiddleware.js';
 import { requireRoles } from '../middleware/roleMiddleware.js';
 import { validate } from '../middleware/validateMiddleware.js';
+import { uploadSingleImage } from '../middleware/uploadMiddleware.js';
 import {
   createEventSchema,
   updateEventSchema,
@@ -36,6 +38,13 @@ router.patch('/:id/submit', protect, requireRoles('organizer'), submitForApprova
 router.patch('/:id/review', protect, requireRoles('super_admin'), validate(approveRejectSchema), reviewEvent);
 router.patch('/:id/cancel', protect, requireRoles('organizer', 'super_admin'), cancelEvent);
 router.patch('/:id/complete', protect, requireRoles('organizer', 'super_admin'), completeEvent);
+router.patch(
+  '/:id/banner',
+  protect,
+  requireRoles('organizer', 'super_admin'),
+  uploadSingleImage('banner'),
+  uploadEventBanner
+);
 
 // Budget routes for event
 router.get('/:eventId/budget', protect, requireRoles('organizer', 'super_admin'), getBudgetByEvent);

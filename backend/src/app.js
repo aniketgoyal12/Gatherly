@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -9,8 +10,12 @@ import { apiLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
-// Security HTTP headers
-app.use(helmet());
+// Security HTTP headers (allow cross-origin image rendering for uploaded banners)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS configuration for React frontend
 app.use(
@@ -25,6 +30,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(cookieParser());
+
+// Serve locally stored fallback uploads when Cloudinary is not configured
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 // Global API Rate Limiter
 app.use('/api', apiLimiter);
