@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
   Compass,
-  Search,
   Ticket,
   Bell,
   Menu,
@@ -14,7 +13,6 @@ import {
   Shield,
   QrCode,
   LogOut,
-  User,
   Heart,
   ShieldCheck,
   Zap,
@@ -133,7 +131,7 @@ export const PublicLayout: React.FC = () => {
               {/* Auth Profile / Login */}
               {isAuthenticated && user ? (
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
+                  <Link to="/profile" className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
                     <div className="w-8 h-8 rounded-full bg-navy-800 border border-navy-700 flex items-center justify-center text-xs font-bold text-cream-100 overflow-hidden">
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
@@ -147,7 +145,7 @@ export const PublicLayout: React.FC = () => {
                         {user.role.replace('_', ' ')}
                       </span>
                     </div>
-                  </div>
+                  </Link>
 
                   <button
                     onClick={handleLogout}

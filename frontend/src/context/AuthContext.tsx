@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, [refreshUser]);
 
-  const login = async (email: string, password = 'password123'): Promise<User> => {
+  const login = async (email: string, password = 'Password@123'): Promise<User> => {
     setLoading(true);
     try {
       const res = await apiClient.post<ApiResponse<{ user: User; token: string; accessToken?: string }>>(

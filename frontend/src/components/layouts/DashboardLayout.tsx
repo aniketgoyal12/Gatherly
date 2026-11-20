@@ -38,24 +38,24 @@ export const DashboardLayout: React.FC = () => {
 
   // Role-Specific Navigation Definitions matching User's 19-screen map
   const organizerNav: NavItem[] = [
-    { label: 'Overview', href: '/organizer', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: 'Create Event', href: '/organizer/events/new', icon: <CalendarPlus className="w-4 h-4" /> },
+    { label: 'Overview', href: '/organizer/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { label: 'Create Event', href: '/organizer/create-event', icon: <CalendarPlus className="w-4 h-4" /> },
     { label: 'AI Planner', href: '/organizer/ai-planner', icon: <Sparkles className="w-4 h-4 text-coral-400" /> },
     { label: 'Budget Tracker', href: '/organizer/budget', icon: <DollarSign className="w-4 h-4" /> },
-    { label: 'Registrations', href: '/organizer/attendees', icon: <Users className="w-4 h-4" /> },
+    { label: 'Registrations', href: '/organizer/registrations', icon: <Users className="w-4 h-4" /> },
     { label: 'Analytics', href: '/organizer/analytics', icon: <BarChart3 className="w-4 h-4" /> },
   ];
 
   const adminNav: NavItem[] = [
-    { label: 'Platform Overview', href: '/admin', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { label: 'Platform Overview', href: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'Event Approvals', href: '/admin/approvals', icon: <ShieldCheck className="w-4 h-4 text-amber-400" /> },
     { label: 'User Management', href: '/admin/users', icon: <UserCheck className="w-4 h-4" /> },
     { label: 'Audit & Reports', href: '/admin/reports', icon: <FileText className="w-4 h-4" /> },
   ];
 
   const staffNav: NavItem[] = [
-    { label: 'Assigned Events', href: '/staff', icon: <Calendar className="w-4 h-4" /> },
-    { label: 'QR Scanner', href: '/staff/scan', icon: <QrCode className="w-4 h-4 text-emerald-400" /> },
+    { label: 'Assigned Events', href: '/staff/assigned-events', icon: <Calendar className="w-4 h-4" /> },
+    { label: 'QR Scanner', href: '/staff/scanner', icon: <QrCode className="w-4 h-4 text-emerald-400" /> },
   ];
 
   const navItems =
@@ -67,8 +67,24 @@ export const DashboardLayout: React.FC = () => {
   };
 
   const isActive = (path: string) => {
-    if (path === '/organizer' || path === '/admin' || path === '/staff') {
-      return location.pathname === path;
+    if (path === '/organizer/dashboard') {
+      return location.pathname === '/organizer/dashboard' || location.pathname === '/organizer';
+    }
+    if (path === '/organizer/create-event') {
+      return location.pathname === '/organizer/create-event' || location.pathname === '/organizer/events/new';
+    }
+    if (path === '/admin/dashboard') {
+      return location.pathname === '/admin/dashboard' || location.pathname === '/admin';
+    }
+    if (path === '/staff/assigned-events') {
+      return location.pathname === '/staff/assigned-events' || location.pathname === '/staff';
+    }
+    if (path === '/staff/scanner') {
+      return (
+        location.pathname === '/staff/scanner' ||
+        location.pathname === '/staff/scan' ||
+        location.pathname === '/staff/result'
+      );
     }
     return location.pathname.startsWith(path);
   };
