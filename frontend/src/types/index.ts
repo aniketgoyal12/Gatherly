@@ -113,6 +113,7 @@ export interface Ticket {
   userId?: string | User;
   tokenHash?: string;
   rawQrToken?: string;
+  signedTicketToken?: string;
   ticketStatus: TicketStatus;
   status?: TicketStatus;
   attendeeName?: string;
@@ -201,6 +202,16 @@ export interface AuditLog {
   ipAddress?: string;
   timestamp?: string;
   createdAt?: string;
+}
+
+export interface EventStaff {
+  id?: string;
+  _id?: string;
+  eventId: string | Event;
+  userId: string | User;
+  gate?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApiResponse<T = unknown> {

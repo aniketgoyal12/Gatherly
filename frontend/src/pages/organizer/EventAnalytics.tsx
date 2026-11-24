@@ -110,7 +110,7 @@ export const EventAnalytics: React.FC = () => {
     try {
       // Parallel fetch analytics and feedback
       const [analyticsRes, feedbackRes] = await Promise.all([
-        apiClient.get(`/admin/analytics/event/${selectedEventId}`),
+        apiClient.get(`/events/${selectedEventId}/analytics`),
         apiClient.get(`/feedback/event/${selectedEventId}`),
       ]);
 

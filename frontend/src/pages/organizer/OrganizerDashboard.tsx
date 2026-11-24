@@ -619,6 +619,22 @@ export const OrganizerDashboard: React.FC = () => {
 
                           {/* QUICK LINKS TO EVENT CONTEXTS */}
                           <Link
+                            to={`/organizer/events/${eventId}/edit`}
+                            title="Edit Event Blueprint"
+                            className="p-1.5 rounded-lg border border-cream-300 text-navy-700 hover:bg-cream-200 transition-colors"
+                          >
+                            <FileEdit className="w-3.5 h-3.5 text-navy-700" />
+                          </Link>
+
+                          <Link
+                            to={`/organizer/events/${eventId}/staff`}
+                            title="Assign Gate Staff"
+                            className="p-1.5 rounded-lg border border-cream-300 text-navy-700 hover:bg-cream-200 transition-colors"
+                          >
+                            <Users className="w-3.5 h-3.5 text-blue-600" />
+                          </Link>
+
+                          <Link
                             to={`/events/${eventId}`}
                             title="View Public Event Page"
                             className="p-1.5 rounded-lg border border-cream-300 text-navy-700 hover:bg-cream-200 transition-colors"

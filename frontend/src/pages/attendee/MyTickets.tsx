@@ -21,6 +21,8 @@ import {
   QrCode,
   ArrowRight,
   MessageSquarePlus,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const MyTickets: React.FC = () => {
@@ -36,6 +38,14 @@ export const MyTickets: React.FC = () => {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+
+  // Cancel Booking Modal State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [selectedTicketToCancel, setSelectedTicketToCancel] = useState<Ticket | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -79,6 +89,38 @@ export const MyTickets: React.FC = () => {
       setReviewError(axiosErr.response?.data?.message || 'Failed to submit review.');
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  // Submit Cancel & Refund Handler
+  const handleCancelTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicketToCancel) return;
+    const reg = selectedTicketToCancel.registrationId;
+    const regId = typeof reg === 'object' && reg !== null ? (reg._id || reg.id) : reg;
+
+    if (!regId) return;
+    setCancelling(true);
+    setCancelError(null);
+
+    try {
+      await apiClient.patch(`/registrations/${regId}/cancel`, {
+        reason: cancelReason.trim(),
+      });
+
+      setCancelSuccess(true);
+      setTimeout(() => {
+        setCancelModalOpen(false);
+        setCancelSuccess(false);
+        setSelectedTicketToCancel(null);
+        setCancelReason('');
+        fetchTickets();
+      }, 1500);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setCancelError(axiosErr.response?.data?.message || 'Failed to cancel booking.');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -211,7 +253,7 @@ export const MyTickets: React.FC = () => {
             const eventTitle = event?.title || 'Gatherly Scheduled Event';
             const eventCategory = event?.category || 'General';
             const eventDate = event?.startDate;
-            const qrPayload = ticket.rawQrToken || ticket.tokenHash || ticketId;
+            const qrPayload = ticket.signedTicketToken || ticket.rawQrToken || ticket.tokenHash || ticketId;
             const isCheckedIn = ticket.ticketStatus === 'checked_in';
 
             return (
@@ -270,6 +312,21 @@ export const MyTickets: React.FC = () => {
                       >
                         Print Pass
                       </Button>
+
+                      {/* Cancel Booking & Refund Request for Valid Tickets */}
+                      {ticket.ticketStatus === 'valid' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTicketToCancel(ticket);
+                            setCancelModalOpen(true);
+                          }}
+                          className="text-xs text-rose-600 hover:bg-rose-50 border-rose-200"
+                        >
+                          Cancel Booking
+                        </Button>
+                      )}
 
                       {/* Review Button for Checked-In / Past Events */}
                       {event && (
@@ -395,6 +452,78 @@ export const MyTickets: React.FC = () => {
                 isLoading={submittingReview}
               >
                 Submit Feedback
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Cancel Booking & Refund Request Modal */}
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={() => {
+          setCancelModalOpen(false);
+          setSelectedTicketToCancel(null);
+          setCancelReason('');
+          setCancelError(null);
+        }}
+        title="Cancel Ticket Reservation"
+      >
+        {cancelSuccess ? (
+          <div className="text-center py-6 space-y-3">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto animate-bounce" />
+            <h3 className="text-base font-bold text-navy-950">Booking Cancelled!</h3>
+            <p className="text-xs text-navy-600">Your pass has been cancelled and seat returned to capacity.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleCancelTicket} className="space-y-4">
+            <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 text-rose-800 text-xs space-y-1">
+              <div className="flex items-center gap-2 font-bold">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Confirm Ticket Cancellation</span>
+              </div>
+              <p className="text-[11px] text-rose-700">
+                Cancelling will deactivate your cryptographic QR pass immediately. If this was a paid booking, a refund request will be automatically queued.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 text-left">
+              <label className="block text-xs font-bold uppercase tracking-wider text-navy-800">
+                Reason for Cancellation (Optional)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Schedule conflict, unable to attend, etc."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full text-xs p-3 bg-cream-50 border border-cream-300 rounded-xl text-navy-950 focus:outline-none focus:ring-2 focus:ring-coral-500"
+              />
+            </div>
+
+            {cancelError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCancelModalOpen(false)}
+              >
+                Keep Ticket
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+                isLoading={cancelling}
+              >
+                Confirm Cancellation
               </Button>
             </div>
           </form>

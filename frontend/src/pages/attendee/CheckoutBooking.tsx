@@ -178,8 +178,7 @@ export const CheckoutBooking: React.FC = () => {
 
       const ticketData = res.data?.data?.ticket;
       if (ticketData) {
-        setConfirmedTicket(ticketData);
-        setBookingStatus('free_confirmed');
+        navigate(`/payment/success?paymentId=${simulatedPaymentId}`);
       } else {
         navigate('/my-tickets');
       }

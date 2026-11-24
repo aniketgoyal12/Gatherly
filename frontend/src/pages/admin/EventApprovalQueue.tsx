@@ -58,7 +58,7 @@ export const EventApprovalQueue: React.FC = () => {
     setActionLoadingId(eid);
     setSuccessBanner(null);
     try {
-      await apiClient.patch(`/events/${eid}/review`, { action: 'approve' });
+      await apiClient.patch(`/events/${eid}/approval`, { action: 'approve' });
       setSuccessBanner(`"${event.title}" has been approved and published to the public portal!`);
       await fetchPendingEvents();
     } catch (err: unknown) {
@@ -84,7 +84,7 @@ export const EventApprovalQueue: React.FC = () => {
     setIsRejecting(true);
     setRejectError(null);
     try {
-      await apiClient.patch(`/events/${eid}/review`, {
+      await apiClient.patch(`/events/${eid}/approval`, {
         action: 'reject',
         rejectionReason: rejectionReason.trim(),
       });

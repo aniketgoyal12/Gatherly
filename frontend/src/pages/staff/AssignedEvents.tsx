@@ -14,49 +14,31 @@ import {
   Users,
   AlertCircle,
   RefreshCw,
-  Sparkles,
+  Shield,
 } from 'lucide-react';
+
+interface StaffEvent extends Event {
+  assignedGate?: string | null;
+}
 
 export const AssignedEvents: React.FC = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<StaffEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFallbackMode, setIsFallbackMode] = useState(false);
 
   const fetchAssignedEvents = async () => {
     setIsLoading(true);
     setError(null);
-    setIsFallbackMode(false);
 
     try {
-      // 1. Try to fetch staff assigned events
+      // Strictly fetch assigned shifts for current staff credentials
       const res = await apiClient.get('/tickets/staff/assigned-events');
-      const assignedList: Event[] = res.data?.data?.events || [];
-
-      if (assignedList.length > 0) {
-        setEvents(assignedList);
-      } else {
-        // Fallback for Organizer/Admin or testing: fetch published events
-        const fallbackRes = await apiClient.get('/events', {
-          params: { status: 'published', limit: 20 },
-        });
-        const publishedList: Event[] = fallbackRes.data?.data?.events || [];
-        setEvents(publishedList);
-        setIsFallbackMode(true);
-      }
+      const assignedList: StaffEvent[] = res.data?.data?.events || [];
+      setEvents(assignedList);
     } catch (err: unknown) {
-      console.warn('Assigned events failed, trying published events fallback...', err);
-      try {
-        const fallbackRes = await apiClient.get('/events', {
-          params: { status: 'published', limit: 20 },
-        });
-        setEvents(fallbackRes.data?.data?.events || []);
-        setIsFallbackMode(true);
-      } catch (fallbackErr: unknown) {
-        const e = fallbackErr as { response?: { data?: { message?: string } } };
-        setError(e.response?.data?.message || 'Failed to load assigned events for gate duty.');
-      }
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || 'Failed to load assigned shifts for gate duty.');
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +54,7 @@ export const AssignedEvents: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-2">
-            <QrCode className="w-3.5 h-3.5" />
+            <QrCode className="w-3.5 h-3.5 text-emerald-600" />
             <span>Gate Access Station</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-navy-950 tracking-tight">
@@ -86,26 +68,11 @@ export const AssignedEvents: React.FC = () => {
         <button
           onClick={fetchAssignedEvents}
           title="Refresh Events"
-          className="p-2 rounded-xl border border-cream-300 text-navy-700 hover:bg-cream-200 self-start md:self-auto"
+          className="p-2 rounded-xl border border-cream-300 text-navy-700 hover:bg-cream-200 self-start md:self-auto cursor-pointer"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
-
-      {/* Fallback Mode Informational Pill */}
-      {isFallbackMode && (
-        <div className="p-3.5 rounded-2xl bg-cream-50 border border-cream-300 text-navy-800 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-coral-500 shrink-0" />
-            <span>
-              <strong>Organizer / Admin Testing Mode:</strong> Displaying all published events available for gate scanner check-in verification.
-            </span>
-          </div>
-          <Badge variant="navy" size="sm">
-            Live Testing
-          </Badge>
-        </div>
-      )}
 
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
@@ -117,19 +84,19 @@ export const AssignedEvents: React.FC = () => {
       {/* Events List */}
       {isLoading ? (
         <div className="p-16 text-center">
-          <div className="w-10 h-10 border-3 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 border-4 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-xs text-navy-600">Loading assigned shifts...</p>
         </div>
       ) : events.length === 0 ? (
         <EmptyState
           icon={<Calendar className="w-8 h-8 text-coral-500" />}
           title="No assigned shifts found"
-          description="You currently have no event gate assignments. Contact your event organizer to be added to an event shift roster."
+          description="You currently have no event gate assignments. Contact the event organizer to be added to an event shift roster."
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {events.map((event) => {
-            const eid = event._id || event.id;
+            const eid = (event._id || event.id) as string;
             const venueName =
               typeof event.venueId === 'object' && event.venueId?.name
                 ? event.venueId.name
@@ -155,7 +122,12 @@ export const AssignedEvents: React.FC = () => {
                       <h3 className="text-base font-black truncate">{event.title}</h3>
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 flex gap-1.5">
+                    {event.assignedGate && (
+                      <Badge variant="navy" size="sm">
+                        📍 {event.assignedGate}
+                      </Badge>
+                    )}
                     <Badge variant="coral" size="sm">
                       Gate Station
                     </Badge>
@@ -201,16 +173,16 @@ export const AssignedEvents: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Prominent Coral CTA */}
+                  {/* Open Scanner CTA */}
                   <div className="pt-3">
                     <Button
                       variant="primary"
                       size="md"
-                      onClick={() => navigate(`/staff/scanner?eventId=${eid}`)}
+                      onClick={() => navigate(`/staff/scanner/${eid}`)}
                       leftIcon={<QrCode className="w-4 h-4" />}
                       className="w-full shadow-sm"
                     >
-                      Open Gate QR Scanner
+                      Launch Scanner Desk
                     </Button>
                   </div>
                 </CardContent>

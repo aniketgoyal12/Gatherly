@@ -32,7 +32,7 @@ const CATEGORIES = [
 export const SearchResults: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const queryParam = searchParams.get('q') || '';
+  const queryParam = searchParams.get('q') || searchParams.get('search') || '';
   const categoryParam = searchParams.get('category') || 'All';
 
   const [query, setQuery] = useState(queryParam);

@@ -3,36 +3,45 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PublicLayout } from '@/components/layouts/PublicLayout';
+import { AttendeeLayout } from '@/components/layouts/AttendeeLayout';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 
-// Common / Auth Screens (20, 21, 22)
+// Common / Auth Screens
 import { LoginRegister } from '@/pages/common/LoginRegister';
 import { ForgotPassword } from '@/pages/common/ForgotPassword';
+import { ResetPassword } from '@/pages/common/ResetPassword';
+import { VerifyEmail } from '@/pages/common/VerifyEmail';
+import { UniversalProfile } from '@/pages/common/UniversalProfile';
 import { NotificationsCenter } from '@/pages/common/NotificationsCenter';
+import { Forbidden } from '@/pages/common/Forbidden';
+import { NotFound } from '@/pages/common/NotFound';
 
-// Attendee Screens (1, 2, 3, 4, 5, 6)
+// Attendee Screens
 import { HomeDiscovery } from '@/pages/attendee/HomeDiscovery';
 import { SearchResults } from '@/pages/attendee/SearchResults';
 import { EventDetails } from '@/pages/attendee/EventDetails';
 import { CheckoutBooking } from '@/pages/attendee/CheckoutBooking';
 import { MyTickets } from '@/pages/attendee/MyTickets';
-import { AttendeeProfile } from '@/pages/attendee/AttendeeProfile';
+import { PaymentSuccess } from '@/pages/attendee/PaymentSuccess';
+import { PaymentFailure } from '@/pages/attendee/PaymentFailure';
 
-// Organizer Screens (7, 8, 9, 10, 11, 12)
+// Organizer Screens
 import { OrganizerDashboard } from '@/pages/organizer/OrganizerDashboard';
 import { CreateEvent } from '@/pages/organizer/CreateEvent';
+import { EditEvent } from '@/pages/organizer/EditEvent';
+import { EventStaffAssignment } from '@/pages/organizer/EventStaffAssignment';
 import { AiEventPlanner } from '@/pages/organizer/AiEventPlanner';
 import { BudgetManagement } from '@/pages/organizer/BudgetManagement';
 import { RegistrationsMgmt } from '@/pages/organizer/RegistrationsMgmt';
 import { EventAnalytics } from '@/pages/organizer/EventAnalytics';
 
-// Super Admin Screens (13, 14, 15, 16)
+// Super Admin Screens
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 import { EventApprovalQueue } from '@/pages/admin/EventApprovalQueue';
 import { UserManagement } from '@/pages/admin/UserManagement';
 import { ReportsAnalytics } from '@/pages/admin/ReportsAnalytics';
 
-// Staff Gate Station Screens (17, 18, 19)
+// Staff Gate Station Screens
 import { AssignedEvents } from '@/pages/staff/AssignedEvents';
 import { QrScanner } from '@/pages/staff/QrScanner';
 import { CheckInResult } from '@/pages/staff/CheckInResult';
@@ -43,69 +52,98 @@ export const App: React.FC = () => {
       <AuthProvider>
         <Routes>
           {/* ========================================================= */}
-          {/* 1. PUBLIC & ATTENDEE MODULE (Wrapped with PublicLayout)   */}
+          {/* 1. PUBLIC SCREENS (Wrapped with PublicLayout)             */}
           {/* ========================================================= */}
           <Route element={<PublicLayout />}>
-            {/* Screen 1: Home Discovery */}
+            {/* Screen S-01: Home Discovery */}
             <Route path="/" element={<HomeDiscovery />} />
 
-            {/* Screen 2: Search & Filter */}
+            {/* Screen S-02: Search & Filter (and alias /events -> /search) */}
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/events" element={<SearchResults />} />
+            <Route path="/events" element={<Navigate to="/search" replace />} />
 
-            {/* Screen 3: Event Details */}
+            {/* Screen S-03: Event Details */}
             <Route path="/events/:id" element={<EventDetails />} />
 
-            {/* Screen 4: Checkout & Booking (Protected) */}
+            {/* Screen S-20: Login & Register */}
+            <Route path="/login" element={<LoginRegister initialTab="login" />} />
+            <Route path="/register" element={<LoginRegister initialTab="register" />} />
+
+            {/* Screen S-22: Forgot Password */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+
+            {/* Screen S-23: Reset Password */}
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+            {/* Screen S-24: Verify Email */}
+            <Route path="/verify-email/:token" element={<VerifyEmail />} />
+
+            {/* Screen S-30: 403 Forbidden */}
+            <Route path="/403" element={<Forbidden />} />
+
+            {/* Screen S-31: 404 Not Found */}
+            <Route path="/404" element={<NotFound />} />
+          </Route>
+
+          {/* ========================================================= */}
+          {/* 2. PROTECTED ATTENDEE MODULE (Wrapped with AttendeeLayout)*/}
+          {/* ========================================================= */}
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['attendee', 'organizer', 'super_admin', 'staff']}>
+                <AttendeeLayout />
+              </ProtectedRoute>
+            }
+          >
+            {/* Screen S-04: Checkout & Booking (Restricted to attendee only) */}
             <Route
               path="/checkout/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['attendee']}>
                   <CheckoutBooking />
                 </ProtectedRoute>
               }
             />
 
-            {/* Screen 5: Digital Wallet & My Tickets (Protected) */}
+            {/* Screen S-25: Payment Success */}
+            <Route
+              path="/payment/success"
+              element={
+                <ProtectedRoute allowedRoles={['attendee']}>
+                  <PaymentSuccess />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Screen S-26: Payment Failure */}
+            <Route
+              path="/payment/failure"
+              element={
+                <ProtectedRoute allowedRoles={['attendee']}>
+                  <PaymentFailure />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Screen S-05: Digital Wallet & My Tickets */}
             <Route
               path="/my-tickets"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['attendee']}>
                   <MyTickets />
                 </ProtectedRoute>
               }
             />
 
-            {/* Screen 6: Attendee Profile (Protected) */}
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <AttendeeProfile />
-                </ProtectedRoute>
-              }
-            />
+            {/* Screen S-06: Universal Profile (Available to all authenticated roles) */}
+            <Route path="/profile" element={<UniversalProfile />} />
 
-            {/* Screen 21: Notifications Center (Protected) */}
-            <Route
-              path="/notifications"
-              element={
-                <ProtectedRoute>
-                  <NotificationsCenter />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Screen 20: Login & Register */}
-            <Route path="/login" element={<LoginRegister initialTab="login" />} />
-            <Route path="/register" element={<LoginRegister initialTab="register" />} />
-
-            {/* Screen 22: Forgot & Reset Password */}
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            {/* Screen S-21: Notifications Center */}
+            <Route path="/notifications" element={<NotificationsCenter />} />
           </Route>
 
           {/* ========================================================= */}
-          {/* 2. ORGANIZER WORKSPACE (Protected: organizer, super_admin) */}
+          {/* 3. ORGANIZER WORKSPACE (Protected: organizer, super_admin) */}
           {/* ========================================================= */}
           <Route
             element={
@@ -114,30 +152,36 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            {/* Screen 7: Organizer Dashboard */}
+            {/* Screen S-07: Organizer Dashboard */}
             <Route path="/organizer" element={<OrganizerDashboard />} />
             <Route path="/organizer/dashboard" element={<OrganizerDashboard />} />
 
-            {/* Screen 8: Create Event Wizard */}
+            {/* Screen S-08: Create Event Wizard */}
             <Route path="/organizer/create-event" element={<CreateEvent />} />
             <Route path="/organizer/events/new" element={<CreateEvent />} />
 
-            {/* Screen 9: AI Event Planner Studio */}
+            {/* Screen S-27: Edit Event Blueprint */}
+            <Route path="/organizer/events/:id/edit" element={<EditEvent />} />
+
+            {/* Screen S-28: Event Staff Shift Assignment */}
+            <Route path="/organizer/events/:id/staff" element={<EventStaffAssignment />} />
+
+            {/* Screen S-09: AI Event Planner Studio */}
             <Route path="/organizer/ai-planner" element={<AiEventPlanner />} />
 
-            {/* Screen 10: Budget & Expense Tracker */}
+            {/* Screen S-10: Budget & Expense Tracker */}
             <Route path="/organizer/budget" element={<BudgetManagement />} />
 
-            {/* Screen 11: Registrations & Operations Kanban */}
+            {/* Screen S-11: Registrations & Operations Kanban */}
             <Route path="/organizer/registrations" element={<RegistrationsMgmt />} />
             <Route path="/organizer/attendees" element={<RegistrationsMgmt />} />
 
-            {/* Screen 12: Event Analytics & Turnout */}
+            {/* Screen S-12: Event Analytics & Turnout */}
             <Route path="/organizer/analytics" element={<EventAnalytics />} />
           </Route>
 
           {/* ========================================================= */}
-          {/* 3. SUPER ADMIN CONSOLE (Protected: super_admin)           */}
+          {/* 4. SUPER ADMIN CONSOLE (Protected: super_admin)           */}
           {/* ========================================================= */}
           <Route
             element={
@@ -146,22 +190,22 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            {/* Screen 13: Platform Overview Dashboard */}
+            {/* Screen S-13: Platform Overview Dashboard */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-            {/* Screen 14: Event Moderation Queue */}
+            {/* Screen S-14: Event Moderation Queue */}
             <Route path="/admin/approvals" element={<EventApprovalQueue />} />
 
-            {/* Screen 15: User & Role Governance */}
+            {/* Screen S-15: User & Role Governance */}
             <Route path="/admin/users" element={<UserManagement />} />
 
-            {/* Screen 16: Audit & Compliance Reports */}
+            {/* Screen S-16: Audit & Compliance Reports */}
             <Route path="/admin/reports" element={<ReportsAnalytics />} />
           </Route>
 
           {/* ========================================================= */}
-          {/* 4. STAFF GATE STATION (Protected: staff, organizer, admin) */}
+          {/* 5. STAFF GATE STATION (Protected: staff, organizer, admin) */}
           {/* ========================================================= */}
           <Route
             element={
@@ -170,22 +214,23 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            {/* Screen 17: Assigned Shifts */}
+            {/* Screen S-17: Assigned Shifts */}
             <Route path="/staff" element={<AssignedEvents />} />
             <Route path="/staff/assigned-events" element={<AssignedEvents />} />
 
-            {/* Screen 18: Mobile Camera QR Scanner */}
+            {/* Screen S-18: Mobile Camera QR Scanner */}
+            <Route path="/staff/scanner/:eventId" element={<QrScanner />} />
             <Route path="/staff/scanner" element={<QrScanner />} />
             <Route path="/staff/scan" element={<QrScanner />} />
 
-            {/* Screen 19: Check-In Result Full-Screen View */}
+            {/* Screen S-19: Check-In Result Standalone View */}
             <Route path="/staff/result" element={<CheckInResult />} />
           </Route>
 
           {/* ========================================================= */}
-          {/* 5. CATCH-ALL REDIRECT FALLBACK                            */}
+          {/* 6. CATCH-ALL ROUTE (HTTP 404)                             */}
           {/* ========================================================= */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

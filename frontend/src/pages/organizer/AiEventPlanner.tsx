@@ -119,7 +119,7 @@ export const AiEventPlanner: React.FC = () => {
         goals,
       };
 
-      const res = await apiClient.post('/ai/generate-plan', payload);
+      const res = await apiClient.post('/ai/event-plan', payload);
       const data: AiResponseData = res.data?.data;
       setAiResult(data);
       setCheckedTasks({});

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +19,7 @@ import {
   CalendarCheck,
   ShieldCheck,
   Building,
+  Phone,
 } from 'lucide-react';
 
 interface LoginRegisterProps {
@@ -28,6 +29,7 @@ interface LoginRegisterProps {
 export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'login' }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, register, isAuthenticated, user } = useAuth();
 
   // Tab State: 'login' | 'register'
@@ -42,8 +44,9 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('attendee');
+  const [isOrganizerSignup, setIsOrganizerSignup] = useState(false);
 
   // UI States
   const [showPassword, setShowPassword] = useState(false);
@@ -60,11 +63,14 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
     setErrorMessage(null);
   }, [location.pathname]);
 
-  // Role-based redirection helper
+  // Role-based redirection helper with returnUrl preservation
   const handleRoleRedirect = (roleToRedirect: UserRole) => {
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
-    if (from && from !== '/login' && from !== '/register') {
-      navigate(from, { replace: true });
+    const returnUrl = searchParams.get('returnUrl');
+    const stateFrom = (location.state as { from?: { pathname: string; search?: string } })?.from;
+    const targetUrl = returnUrl || (stateFrom ? `${stateFrom.pathname}${stateFrom.search || ''}` : null);
+
+    if (targetUrl && !targetUrl.startsWith('/login') && !targetUrl.startsWith('/register')) {
+      navigate(targetUrl, { replace: true });
       return;
     }
 
@@ -145,7 +151,8 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
 
     setLoading(true);
     try {
-      const registeredUser = await register(name.trim(), email.trim(), password, role);
+      const assignedRole: UserRole = isOrganizerSignup ? 'organizer' : 'attendee';
+      const registeredUser = await register(name.trim(), email.trim(), password, assignedRole);
       handleRoleRedirect(registeredUser.role);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } }; message?: string };
@@ -160,10 +167,9 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
   };
 
   // Quick Demo Account Auto-Fill
-  const fillDemoAccount = (demoEmail: string, demoRole: UserRole) => {
+  const fillDemoAccount = (demoEmail: string) => {
     setEmail(demoEmail);
     setPassword('Password@123');
-    setRole(demoRole);
     setErrorMessage(null);
   };
 
@@ -194,7 +200,7 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
                 setActiveTab('login');
                 setErrorMessage(null);
               }}
-              className={`py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'login'
                   ? 'bg-navy-950 text-white shadow-xs'
                   : 'text-navy-700 hover:text-navy-950'
@@ -208,31 +214,31 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
                 setActiveTab('register');
                 setErrorMessage(null);
               }}
-              className={`py-2 text-xs font-bold rounded-xl transition-all ${
+              className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'register'
                   ? 'bg-navy-950 text-white shadow-xs'
                   : 'text-navy-700 hover:text-navy-950'
               }`}
             >
-              Create Account
+              Register
             </button>
           </div>
 
-          {/* Error Alert Box */}
+          {/* Error Banner */}
           {errorMessage && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2.5 text-xs animate-shake">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-              <div className="flex-1 font-medium leading-relaxed">{errorMessage}</div>
+            <div className="p-3.5 mb-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
-          {/* TAB 1: SIGN IN FORM */}
+          {/* TAB 1: LOGIN FORM */}
           {activeTab === 'login' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               <Input
                 label="Email Address"
                 type="email"
-                placeholder="name@example.com"
+                placeholder="name@gatherly.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 leftIcon={<Mail className="w-4 h-4" />}
@@ -241,31 +247,31 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
               />
 
               <div className="space-y-1">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  leftIcon={<Lock className="w-4 h-4" />}
-                  helperText="Default password: Password@123"
-                  rightIcon={
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-navy-400 hover:text-navy-700 focus:outline-none"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  }
-                  required
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <Input
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    leftIcon={<Lock className="w-4 h-4" />}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-8 text-navy-500 hover:text-navy-800 focus:outline-none cursor-pointer"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
 
-                <div className="flex justify-end pt-1">
+                <div className="text-right pt-1">
                   <Link
                     to="/forgot-password"
-                    className="text-[11px] font-semibold text-coral-600 hover:text-coral-700 hover:underline"
+                    className="text-[11px] font-semibold text-coral-600 hover:text-coral-700 hover:underline transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -275,29 +281,23 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
               <Button
                 type="submit"
                 variant="primary"
-                size="md"
+                size="lg"
+                className="w-full mt-2 cursor-pointer shadow-md"
                 isLoading={loading}
-                className="w-full mt-2"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                Sign In to Gatherly
+                Sign In
               </Button>
 
-              {/* Demo Account Quick Switcher */}
-              <div className="pt-4 border-t border-cream-200 mt-6 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-navy-500">
-                    Quick Demo Personas
-                  </span>
-                  <Badge variant="coral" size="sm">
-                    Click to Test
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-left">
+              {/* Seed Demo Credentials Helper */}
+              <div className="pt-4 border-t border-cream-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-navy-400 block mb-2 text-center">
+                  Quick Demo Auto-Fill (Password: Password@123)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('attendee@gatherly.com', 'attendee')}
+                    onClick={() => fillDemoAccount('attendee@gatherly.com')}
                     className="p-2 rounded-xl bg-cream-100 hover:bg-cream-200 border border-cream-300 text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900">
@@ -309,7 +309,7 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
 
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('organizer@gatherly.com', 'organizer')}
+                    onClick={() => fillDemoAccount('organizer@gatherly.com')}
                     className="p-2 rounded-xl bg-cream-100 hover:bg-cream-200 border border-cream-300 text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900">
@@ -321,7 +321,7 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
 
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('staff@gatherly.com', 'staff')}
+                    onClick={() => fillDemoAccount('staff@gatherly.com')}
                     className="p-2 rounded-xl bg-cream-100 hover:bg-cream-200 border border-cream-300 text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900">
@@ -333,7 +333,7 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
 
                   <button
                     type="button"
-                    onClick={() => fillDemoAccount('admin@gatherly.com', 'super_admin')}
+                    onClick={() => fillDemoAccount('admin@gatherly.com')}
                     className="p-2 rounded-xl bg-cream-100 hover:bg-cream-200 border border-cream-300 text-left transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 text-xs font-bold text-navy-900">
@@ -372,63 +372,49 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
                 autoComplete="email"
               />
 
-              {/* Account Role Selector */}
-              <div className="space-y-1.5 text-left">
-                <label className="block text-xs font-bold uppercase tracking-wider text-navy-800">
-                  Select Role
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRole('attendee')}
-                    className={`p-2.5 rounded-xl border text-center transition-all ${
-                      role === 'attendee'
-                        ? 'border-coral-500 bg-coral-50 text-coral-700 font-bold shadow-xs'
-                        : 'border-cream-300 bg-cream-100 hover:bg-cream-200 text-navy-800'
-                    }`}
-                  >
-                    <Ticket className="w-4 h-4 mx-auto mb-1 text-emerald-600" />
-                    <span className="text-xs block">Attendee</span>
-                  </button>
+              <Input
+                label="Phone Number (Optional)"
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                leftIcon={<Phone className="w-4 h-4" />}
+              />
 
-                  <button
-                    type="button"
-                    onClick={() => setRole('organizer')}
-                    className={`p-2.5 rounded-xl border text-center transition-all ${
-                      role === 'organizer'
-                        ? 'border-coral-500 bg-coral-50 text-coral-700 font-bold shadow-xs'
-                        : 'border-cream-300 bg-cream-100 hover:bg-cream-200 text-navy-800'
-                    }`}
-                  >
-                    <CalendarCheck className="w-4 h-4 mx-auto mb-1 text-coral-500" />
-                    <span className="text-xs block">Organizer</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRole('staff')}
-                    className={`p-2.5 rounded-xl border text-center transition-all ${
-                      role === 'staff'
-                        ? 'border-coral-500 bg-coral-50 text-coral-700 font-bold shadow-xs'
-                        : 'border-cream-300 bg-cream-100 hover:bg-cream-200 text-navy-800'
-                    }`}
-                  >
-                    <ShieldCheck className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-                    <span className="text-xs block">Staff</span>
-                  </button>
+              {/* Organizer Registration Option */}
+              <div className="p-3 rounded-2xl bg-cream-100 border border-cream-300 flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-navy-950 block">Register as Organizer</span>
+                  <p className="text-[11px] text-navy-500">Plan and host collegiate events on Gatherly.</p>
                 </div>
+                <input
+                  type="checkbox"
+                  id="organizerToggle"
+                  checked={isOrganizerSignup}
+                  onChange={(e) => setIsOrganizerSignup(e.target.checked)}
+                  className="w-4 h-4 text-coral-500 rounded border-cream-300 focus:ring-coral-500 cursor-pointer"
+                />
               </div>
 
-              <Input
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="At least 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                leftIcon={<Lock className="w-4 h-4" />}
-                required
-                autoComplete="new-password"
-              />
+              <div className="relative">
+                <Input
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Minimum 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  leftIcon={<Lock className="w-4 h-4" />}
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-8 text-navy-500 hover:text-navy-800 focus:outline-none cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
 
               <Input
                 label="Confirm Password"
@@ -444,21 +430,16 @@ export const LoginRegister: React.FC<LoginRegisterProps> = ({ initialTab = 'logi
               <Button
                 type="submit"
                 variant="primary"
-                size="md"
+                size="lg"
+                className="w-full mt-2 cursor-pointer shadow-md"
                 isLoading={loading}
-                className="w-full mt-2"
-                rightIcon={<Sparkles className="w-4 h-4" />}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
               >
-                Create Account
+                {isOrganizerSignup ? 'Register as Organizer' : 'Create Attendee Account'}
               </Button>
             </form>
           )}
         </Card>
-
-        {/* Footer Navigation */}
-        <p className="text-center text-xs text-navy-600">
-          By signing up, you agree to Gatherly's Terms of Service and Privacy Policy.
-        </p>
       </div>
     </div>
   );

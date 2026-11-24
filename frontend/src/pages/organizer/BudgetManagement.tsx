@@ -170,7 +170,7 @@ export const BudgetManagement: React.FC = () => {
     setIsSavingConfig(true);
     setConfigError(null);
     try {
-      await apiClient.post('/events/budget', {
+      await apiClient.post(`/events/${selectedEventId}/budget`, {
         eventId: selectedEventId,
         totalBudget: Number(configTotal),
         expenseCategories: configCategories,
@@ -202,7 +202,7 @@ export const BudgetManagement: React.FC = () => {
     setIsLoggingExpense(true);
     setExpenseError(null);
     try {
-      await apiClient.post('/events/budget/expense', {
+      await apiClient.post(`/events/${selectedEventId}/budget/expenses`, {
         eventId: selectedEventId,
         title: expenseTitle.trim(),
         amount: Number(expenseAmount),
