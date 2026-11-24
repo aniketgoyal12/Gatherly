@@ -18,6 +18,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password hash is required'],
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     role: {
       type: String,
       enum: ['super_admin', 'organizer', 'attendee', 'staff'],
@@ -33,6 +38,18 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'suspended'],
       default: 'active',
       required: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      default: null,
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
     },
   },
   {

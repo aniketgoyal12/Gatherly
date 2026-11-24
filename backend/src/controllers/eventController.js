@@ -1,8 +1,11 @@
+import bcrypt from 'bcrypt';
 import Event from '../models/Event.js';
 import Registration from '../models/Registration.js';
 import Payment from '../models/Payment.js';
 import Notification from '../models/Notification.js';
 import Venue from '../models/Venue.js';
+import User from '../models/User.js';
+import EventStaff from '../models/EventStaff.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -13,7 +16,8 @@ import { uploadBufferToCloudinary, deleteFromCloudinary } from '../config/cloudi
  * Public Discovery: Search & Filter Events (Workflow 5)
  */
 export const getEvents = asyncHandler(async (req, res) => {
-  const { search, category, startDate, endDate, status = 'published', page = 1, limit = 10 } = req.query;
+  const { search, q, category, startDate, endDate, status = 'published', page = 1, limit = 10 } = req.query;
+  const searchTerm = search || q;
 
   const query = {};
 
@@ -24,12 +28,12 @@ export const getEvents = asyncHandler(async (req, res) => {
     query.status = status;
   }
 
-  if (category) {
+  if (category && category !== 'All') {
     query.category = { $regex: new RegExp(category, 'i') };
   }
 
-  if (search) {
-    query.$text = { $search: search };
+  if (searchTerm) {
+    query.$text = { $search: searchTerm };
   }
 
   if (startDate || endDate) {
@@ -115,6 +119,7 @@ export const createEvent = asyncHandler(async (req, res) => {
 
 /**
  * Edit Event Details (Workflow 6)
+ * Only events in 'draft' or 'rejected' status can be modified by organizers.
  */
 export const updateEvent = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -127,6 +132,14 @@ export const updateEvent = asyncHandler(async (req, res) => {
   // Ownership verification
   if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
     throw new ApiError(403, 'Forbidden: You do not have permission to edit this event');
+  }
+
+  // State guard: Organizers cannot modify published or completed events directly
+  if (req.user.role !== 'super_admin' && !['draft', 'rejected'].includes(event.status)) {
+    throw new ApiError(
+      400,
+      `Cannot edit event with status '${event.status}'. Only draft or rejected events can be edited.`
+    );
   }
 
   Object.assign(event, req.body);
@@ -291,7 +304,6 @@ export const completeEvent = asyncHandler(async (req, res) => {
   event.status = 'completed';
   await event.save();
 
-  // Notify registered attendees to submit feedback (Workflow 7)
   const registrations = await Registration.find({ eventId: event._id, bookingStatus: 'confirmed' });
   for (const reg of registrations) {
     await Notification.create({
@@ -306,7 +318,7 @@ export const completeEvent = asyncHandler(async (req, res) => {
 });
 
 /**
- * Upload or Replace Event Banner Image (Cloudinary / Local Dev Fallback)
+ * Upload or Replace Event Banner Image
  */
 export const uploadEventBanner = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -316,7 +328,6 @@ export const uploadEventBanner = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Event not found');
   }
 
-  // Ownership check (Organizer who owns event or Super Admin)
   if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
     throw new ApiError(403, 'Forbidden: You do not have permission to update this event banner');
   }
@@ -330,7 +341,6 @@ export const uploadEventBanner = asyncHandler(async (req, res) => {
     originalName: req.file.originalname,
   });
 
-  // Clean up previous banner asset if one already existed
   if (event.bannerPublicId) {
     await deleteFromCloudinary(event.bannerPublicId).catch(() => {});
   }
@@ -355,6 +365,135 @@ export const uploadEventBanner = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Get Staff Assigned to Event (/api/v1/events/:eventId/staff)
+ */
+export const getEventStaff = asyncHandler(async (req, res) => {
+  const eventId = req.params.eventId || req.params.id;
+  const event = await Event.findById(eventId);
+
+  if (!event) {
+    throw new ApiError(404, 'Event not found');
+  }
+
+  if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not own this event');
+  }
+
+  const staffAssignments = await EventStaff.find({ eventId }).populate(
+    'userId',
+    'name email role phone accountStatus'
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, { staff: staffAssignments }, 'Event staff assignments retrieved')
+  );
+});
+
+/**
+ * Assign Staff to Event (/api/v1/events/:eventId/staff)
+ * If staff user does not exist, auto-create staff account with temporary password.
+ */
+export const assignStaffToEvent = asyncHandler(async (req, res) => {
+  const eventId = req.params.eventId || req.params.id;
+  const { email, gate } = req.body;
+
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new ApiError(404, 'Event not found');
+  }
+
+  if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not own this event');
+  }
+
+  let staffUser = await User.findOne({ email: email.toLowerCase() });
+  let temporaryPassword = null;
+
+  if (!staffUser) {
+    // Generate temporary password
+    temporaryPassword = `Staff@${Math.floor(100000 + Math.random() * 900000)}`;
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(temporaryPassword, salt);
+
+    staffUser = await User.create({
+      name: email.split('@')[0],
+      email: email.toLowerCase(),
+      passwordHash,
+      role: 'staff',
+      accountStatus: 'active',
+      mustChangePassword: true,
+    });
+  } else if (staffUser.role === 'attendee') {
+    staffUser.role = 'staff';
+    await staffUser.save();
+  }
+
+  let assignment = await EventStaff.findOne({ eventId, userId: staffUser._id });
+  if (assignment) {
+    if (gate !== undefined) assignment.gate = gate || null;
+    await assignment.save();
+  } else {
+    assignment = await EventStaff.create({
+      eventId,
+      userId: staffUser._id,
+      gate: gate || null,
+    });
+  }
+
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        assignment: {
+          id: assignment._id,
+          eventId,
+          gate: assignment.gate,
+          user: {
+            id: staffUser._id,
+            name: staffUser.name,
+            email: staffUser.email,
+            role: staffUser.role,
+          },
+        },
+        temporaryPassword, // Provided only when a brand-new staff user is provisioned
+      },
+      'Staff member assigned to event successfully'
+    )
+  );
+});
+
+/**
+ * Remove Staff Assignment (/api/v1/events/:eventId/staff/:staffId)
+ */
+export const removeStaffFromEvent = asyncHandler(async (req, res) => {
+  const eventId = req.params.eventId || req.params.id;
+  const { staffId } = req.params;
+
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new ApiError(404, 'Event not found');
+  }
+
+  if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not own this event');
+  }
+
+  // Find assignment by assignment ID or userId
+  const deleted = await EventStaff.findOneAndDelete({
+    eventId,
+    $or: [{ _id: staffId }, { userId: staffId }],
+  });
+
+  if (!deleted) {
+    throw new ApiError(404, 'Staff assignment record not found for this event');
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, null, 'Staff member removed from event shift successfully')
+  );
+});
+
 export default {
   getEvents,
   getEventById,
@@ -365,4 +504,7 @@ export default {
   cancelEvent,
   completeEvent,
   uploadEventBanner,
+  getEventStaff,
+  assignStaffToEvent,
+  removeStaffFromEvent,
 };

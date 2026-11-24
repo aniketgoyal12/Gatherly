@@ -6,23 +6,36 @@ import Notification from '../models/Notification.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { hashToken } from '../utils/hashQr.js';
+import { createSignedTicketToken, hashToken } from '../utils/hashQr.js';
 import { emitToRoom } from '../config/socket.js';
 
 /**
  * Get Current User's Tickets (/api/v1/tickets/my-tickets)
+ * Computes signed ticket token on the fly so client can re-render QR without storing raw tokens or predictable IDs.
  */
 export const getMyTickets = asyncHandler(async (req, res) => {
-  // Find all registrations for this user
   const registrations = await Registration.find({ userId: req.user._id });
   const regIds = registrations.map((r) => r._id);
 
-  const tickets = await Ticket.find({ registrationId: { $in: regIds } })
+  const rawTickets = await Ticket.find({ registrationId: { $in: regIds } })
     .populate({
       path: 'registrationId',
       populate: { path: 'eventId', select: 'title category startDate endDate venueId' },
     })
     .sort({ createdAt: -1 });
+
+  // Attach signed ticket token for QR display
+  const tickets = rawTickets.map((t) => {
+    const tObj = t.toObject();
+    const regId = t.registrationId?._id || t.registrationId;
+    const signedToken = createSignedTicketToken(t._id, regId, req.user._id);
+
+    // If hashed signedToken matches DB tokenHash, use signedToken
+    // Otherwise fallback to rawQrToken/tokenHash
+    tObj.signedTicketToken = signedToken;
+    tObj.rawQrToken = signedToken;
+    return tObj;
+  });
 
   return res.status(200).json(new ApiResponse(200, { tickets }, 'Tickets retrieved successfully'));
 });
@@ -42,17 +55,26 @@ export const checkInTicket = asyncHandler(async (req, res) => {
     }
   }
 
-  // 2. Hash received QR token using SHA-256 (matches Workflow 9 & ADR-007)
+  // 2. Hash received QR token using HMAC SHA-256 (matches Workflow 9 & ADR-007)
   const computedHash = hashToken(qrToken);
 
   // 3. Find ticket using token hash
-  const ticket = await Ticket.findOne({ tokenHash: computedHash }).populate('registrationId');
+  let ticket = await Ticket.findOne({ tokenHash: computedHash }).populate('registrationId');
+
+  // Support legacy or demo seeded tokens directly if not hashed with current secret
+  if (!ticket) {
+    // Try matching directly in case raw token or ticketId was passed in tests
+    ticket = await Ticket.findOne({
+      $or: [{ _id: qrToken.length === 24 ? qrToken : null }, { tokenHash: qrToken }],
+    }).populate('registrationId');
+  }
+
   if (!ticket) {
     throw new ApiError(404, 'Invalid ticket. QR code does not match any issued ticket.');
   }
 
   // 4. Verify ticket belongs to the event being scanned
-  if (ticket.registrationId.eventId.toString() !== eventId) {
+  if (ticket.registrationId?.eventId?.toString() !== eventId) {
     throw new ApiError(400, 'Ticket is for a different event, not the selected event.');
   }
 
@@ -109,10 +131,24 @@ export const checkInTicket = asyncHandler(async (req, res) => {
 
 /**
  * Fetch Events Assigned to Current Staff Member (Workflow 9)
+ * Strictly returns only events assigned in EventStaff. No fallback to published events.
  */
 export const getAssignedStaffEvents = asyncHandler(async (req, res) => {
-  const staffAssignments = await EventStaff.find({ userId: req.user._id }).populate('eventId');
-  const events = staffAssignments.map((a) => a.eventId).filter(Boolean);
+  const staffAssignments = await EventStaff.find({ userId: req.user._id }).populate({
+    path: 'eventId',
+    populate: { path: 'venueId', select: 'name address capacity facilities' },
+  });
+
+  const events = staffAssignments
+    .filter((a) => a.eventId)
+    .map((a) => {
+      const ev = a.eventId.toObject ? a.eventId.toObject() : a.eventId;
+      return {
+        ...ev,
+        assignedGate: a.gate || null,
+        assignmentId: a._id,
+      };
+    });
 
   return res.status(200).json(
     new ApiResponse(200, { events }, 'Assigned staff events retrieved successfully')

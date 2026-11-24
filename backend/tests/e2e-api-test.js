@@ -1,6 +1,6 @@
 /**
  * Gatherly Backend — 1-Click End-to-End API Test Runner
- * Runs all 25+ core API workflows sequentially with automatic token & ID chaining.
+ * Runs all 35+ core API workflows sequentially across all 9 modules with automatic token & ID chaining.
  *
  * Usage:
  *   1. Ensure MongoDB is running & seeded (`npm run seed`)
@@ -30,6 +30,9 @@ const state = {
   registrationId: '',
   qrToken: '',
   taskId: '',
+  targetUserId: '',
+  notificationId: '',
+  aiPlanId: '',
 };
 
 let passed = 0;
@@ -81,7 +84,7 @@ function section(title) {
 }
 
 async function main() {
-  console.log(`${C.bold}${C.cyan}\n🚀 Gatherly Backend — 1-Click E2E API Test Suite${C.reset}`);
+  console.log(`${C.bold}${C.cyan}\n🚀 Gatherly Backend — Complete 9-Phase E2E API Test Suite${C.reset}`);
   console.log(`${C.dim}Target: ${BASE_URL}${C.reset}`);
 
   // Quick connectivity check
@@ -95,7 +98,7 @@ async function main() {
   }
 
   // PHASE 0: Health Check
-  section('Phase 0: System Health');
+  section('Phase 0: System Health & Gateway Status');
   await runStep('0.1 GET /health returns 200 OK', async () => {
     const { status, json, ms } = await apiRequest('GET', '/health');
     assert(status === 200, `Expected 200, got ${status}`);
@@ -137,9 +140,73 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 2: Venue & Event Creation
-  section('Phase 2: Venue & Event Lifecycle (Organizer)');
-  await runStep('2.1 POST /venues creates Venue', async () => {
+  await runStep('1.6 POST /auth/forgot-password handles reset request', async () => {
+    const { status, json, ms } = await apiRequest('POST', '/auth/forgot-password', {
+      body: { email: 'attendee@gatherly.com' },
+    });
+    assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
+    assert(json?.success === true, 'Expected success: true');
+    return `${ms}ms`;
+  });
+
+  // PHASE 2: AI Event Blueprint Studio
+  section('Phase 2: AI Event Blueprint Studio (Workflow 1)');
+  await runStep('2.1 POST /ai/generate-plan drafts comprehensive blueprint', async () => {
+    const { status, json, ms } = await apiRequest('POST', '/ai/generate-plan', {
+      token: state.organizerToken,
+      body: {
+        eventType: 'hackathon',
+        targetAudience: 'developers',
+        attendees: 300,
+        budget: 200000,
+        duration: '2 days',
+        location: 'Main Auditorium',
+        goals: 'Build prototype web and AI products',
+      },
+    });
+    assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
+    assert(json?.data?.generatedPlan?.checklist?.length > 0, 'Missing generated checklist');
+    return `${ms}ms`;
+  });
+
+  await runStep('2.2 POST /ai/approve-plan saves approved plan to database', async () => {
+    const { status, json, ms } = await apiRequest('POST', '/ai/approve-plan', {
+      token: state.organizerToken,
+      body: {
+        planType: 'comprehensive_event_blueprint',
+        inputs: { eventType: 'hackathon', attendees: 300, budget: 200000 },
+        generatedPlan: {
+          checklist: ['Finalize venue agreement', 'Setup high-speed Wi-Fi network', 'Coordinate catering'],
+          budgetSplit: { venue: 80000, catering: 60000, avAndTech: 40000, contingency: 20000 },
+        },
+        applyBudget: true,
+      },
+    });
+    assert(status === 201, `Expected 201, got ${status} — ${json?.message}`);
+    state.aiPlanId = json?.data?.aiPlan?._id;
+    return `${ms}ms`;
+  });
+
+  await runStep('2.3 POST /ai/predict-turnout returns ML attendance forecast', async () => {
+    const { status, json, ms } = await apiRequest('POST', '/ai/predict-turnout', {
+      token: state.organizerToken,
+      body: { eventId: state.eventId || 'temp-preview-id' },
+    });
+    assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
+    assert(typeof json?.data?.predictedTurnoutRate === 'number', 'Expected numeric turnout rate');
+    return `${ms}ms`;
+  });
+
+  // PHASE 3: Venue & Event Creation
+  section('Phase 3: Venue & Event Lifecycle (Organizer)');
+  await runStep('3.1 GET /venues lists available venues', async () => {
+    const { status, json, ms } = await apiRequest('GET', '/venues');
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(Array.isArray(json?.data?.venues), 'Expected venues array');
+    return `${ms}ms`;
+  });
+
+  await runStep('3.2 POST /venues creates Venue', async () => {
     const { status, json, ms } = await apiRequest('POST', '/venues', {
       token: state.organizerToken,
       body: {
@@ -155,7 +222,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('2.2 POST /events creates Event in draft state', async () => {
+  await runStep('3.3 POST /events creates Event in draft state', async () => {
     const { status, json, ms } = await apiRequest('POST', '/events', {
       token: state.organizerToken,
       body: {
@@ -176,7 +243,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('2.3 PATCH /events/:id/submit moves Event to pending_approval', async () => {
+  await runStep('3.4 PATCH /events/:id/submit moves Event to pending_approval', async () => {
     const { status, json, ms } = await apiRequest('PATCH', `/events/${state.eventId}/submit`, {
       token: state.organizerToken,
     });
@@ -188,9 +255,9 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 3: Admin RBAC & Approval
-  section('Phase 3: Super Admin Governance & RBAC Security');
-  await runStep('3.1 [RBAC] Attendee blocked from /admin/pending-events (403)', async () => {
+  // PHASE 4: Admin RBAC & Governance
+  section('Phase 4: Super Admin Governance & RBAC Security');
+  await runStep('4.1 [RBAC] Attendee blocked from /admin/pending-events (403)', async () => {
     const { status, ms } = await apiRequest('GET', '/admin/pending-events', {
       token: state.attendeeToken,
     });
@@ -198,7 +265,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('3.2 GET /admin/pending-events returns queue for Super Admin', async () => {
+  await runStep('4.2 GET /admin/pending-events returns queue for Super Admin', async () => {
     const { status, ms } = await apiRequest('GET', '/admin/pending-events', {
       token: state.adminToken,
     });
@@ -206,7 +273,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('3.3 PATCH /events/:id/review approves & publishes Event', async () => {
+  await runStep('4.3 PATCH /events/:id/review approves & publishes Event', async () => {
     const { status, json, ms } = await apiRequest('PATCH', `/events/${state.eventId}/review`, {
       token: state.adminToken,
       body: { action: 'approve' },
@@ -216,16 +283,56 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 4: Attendee Discovery & Booking
-  section('Phase 4: Attendee Discovery & Ticket Booking');
-  await runStep('4.1 GET /events?category=Technology public discovery works', async () => {
+  await runStep('4.4 GET /admin/users returns platform user directory', async () => {
+    const { status, json, ms } = await apiRequest('GET', '/admin/users', {
+      token: state.adminToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(Array.isArray(json?.data?.users), 'Expected users array');
+    const nonAdmin = json?.data?.users?.find((u) => u.role !== 'super_admin');
+    if (nonAdmin) state.targetUserId = nonAdmin._id;
+    return `${ms}ms`;
+  });
+
+  if (state.targetUserId) {
+    await runStep('4.5 PATCH /admin/users/:id/status suspends user account', async () => {
+      const { status, json, ms } = await apiRequest('PATCH', `/admin/users/${state.targetUserId}/status`, {
+        token: state.adminToken,
+        body: { accountStatus: 'suspended' },
+      });
+      assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
+      assert(json?.data?.user?.accountStatus === 'suspended', 'Expected accountStatus suspended');
+      return `${ms}ms`;
+    });
+
+    await runStep('4.6 PATCH /admin/users/:id/status reactivates user account', async () => {
+      const { status, json, ms } = await apiRequest('PATCH', `/admin/users/${state.targetUserId}/status`, {
+        token: state.adminToken,
+        body: { accountStatus: 'active' },
+      });
+      assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
+      assert(json?.data?.user?.accountStatus === 'active', 'Expected accountStatus active');
+      return `${ms}ms`;
+    });
+  }
+
+  // PHASE 5: Attendee Discovery & Booking
+  section('Phase 5: Attendee Discovery & Ticket Booking');
+  await runStep('5.1 GET /events?category=Technology public discovery works', async () => {
     const { status, json, ms } = await apiRequest('GET', '/events?category=Technology');
     assert(status === 200, `Expected 200, got ${status}`);
     assert(Array.isArray(json?.data?.events), 'Expected events array');
     return `${ms}ms`;
   });
 
-  await runStep('4.2 POST /registrations/reserve issues free ticket + rawQrToken', async () => {
+  await runStep('5.2 GET /events/:id returns full event details', async () => {
+    const { status, json, ms } = await apiRequest('GET', `/events/${state.eventId}`);
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(json?.data?.event?._id === state.eventId, 'Expected matching event ID');
+    return `${ms}ms`;
+  });
+
+  await runStep('5.3 POST /registrations/reserve issues free ticket + rawQrToken', async () => {
     const { status, json, ms } = await apiRequest('POST', '/registrations/reserve', {
       token: state.attendeeToken,
       body: { eventId: state.eventId, ticketType: 'free' },
@@ -237,7 +344,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('4.3 [Security] Duplicate booking blocked with 409 Conflict', async () => {
+  await runStep('5.4 [Security] Duplicate booking blocked with 409 Conflict', async () => {
     const { status, ms } = await apiRequest('POST', '/registrations/reserve', {
       token: state.attendeeToken,
       body: { eventId: state.eventId, ticketType: 'free' },
@@ -246,7 +353,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('4.4 GET /tickets/my-tickets returns attendee tickets', async () => {
+  await runStep('5.5 GET /tickets/my-tickets returns attendee tickets', async () => {
     const { status, ms } = await apiRequest('GET', '/tickets/my-tickets', {
       token: state.attendeeToken,
     });
@@ -254,9 +361,26 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 5: QR Check-In & Anti-Fraud
-  section('Phase 5: Gate QR Check-In & Anti-Fraud Tests');
-  await runStep('5.1 POST /tickets/check-in accepts valid QR on 1st scan', async () => {
+  await runStep('5.6 GET /registrations/my returns attendee registrations', async () => {
+    const { status, ms } = await apiRequest('GET', '/registrations/my', {
+      token: state.attendeeToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    return `${ms}ms`;
+  });
+
+  // PHASE 6: QR Check-In & Anti-Fraud
+  section('Phase 6: Gate QR Check-In & Anti-Fraud Tests');
+  await runStep('6.1 GET /tickets/staff/assigned-events checks staff schedule', async () => {
+    const { status, json, ms } = await apiRequest('GET', '/tickets/staff/assigned-events', {
+      token: state.staffToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(Array.isArray(json?.data?.events), 'Expected events array');
+    return `${ms}ms`;
+  });
+
+  await runStep('6.2 POST /tickets/check-in accepts valid QR on 1st scan', async () => {
     const { status, json, ms } = await apiRequest('POST', '/tickets/check-in', {
       token: state.organizerToken,
       body: { qrToken: state.qrToken, eventId: state.eventId },
@@ -265,7 +389,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('5.2 [Anti-Fraud] Duplicate QR re-scan rejected (400/409)', async () => {
+  await runStep('6.3 [Anti-Fraud] Duplicate QR re-scan rejected (400/409)', async () => {
     const { status, ms } = await apiRequest('POST', '/tickets/check-in', {
       token: state.organizerToken,
       body: { qrToken: state.qrToken, eventId: state.eventId },
@@ -274,7 +398,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('5.3 [Anti-Fraud] Fake/tampered QR token rejected (400/404)', async () => {
+  await runStep('6.4 [Anti-Fraud] Fake/tampered QR token rejected (400/404)', async () => {
     const { status, ms } = await apiRequest('POST', '/tickets/check-in', {
       token: state.organizerToken,
       body: { qrToken: 'FAKE_TAMPERED_TOKEN_99999', eventId: state.eventId },
@@ -283,18 +407,27 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 6: Budget, Tasks & Analytics
-  section('Phase 6: Organizer Budget, Tasks & Analytics');
-  await runStep('6.1 POST /events/budget configures event budget', async () => {
+  // PHASE 7: Budget, Tasks & Operations
+  section('Phase 7: Organizer Budget, Tasks & Operations');
+  await runStep('7.1 GET /events/:eventId/budget returns budget overview', async () => {
+    const { status, ms } = await apiRequest('GET', `/events/${state.eventId}/budget`, {
+      token: state.organizerToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    return `${ms}ms`;
+  });
+
+  await runStep('7.2 POST /events/budget configures event budget', async () => {
     const { status, json, ms } = await apiRequest('POST', '/events/budget', {
       token: state.organizerToken,
       body: {
         eventId: state.eventId,
-        totalBudget: 100000,
+        totalBudget: 180000,
         expenseCategories: [
-          { category: 'Venue', allocatedAmount: 40000 },
-          { category: 'Catering', allocatedAmount: 35000 },
-          { category: 'Marketing', allocatedAmount: 25000 },
+          { category: 'venue', allocatedAmount: 70000 },
+          { category: 'catering', allocatedAmount: 50000 },
+          { category: 'avAndTech', allocatedAmount: 40000 },
+          { category: 'contingency', allocatedAmount: 20000 },
         ],
       },
     });
@@ -302,21 +435,21 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('6.2 POST /events/budget/expense logs actual expense', async () => {
+  await runStep('7.3 POST /events/budget/expense logs actual expense', async () => {
     const { status, json, ms } = await apiRequest('POST', '/events/budget/expense', {
       token: state.organizerToken,
       body: {
         eventId: state.eventId,
         title: 'Stage Lighting & Mic Setup',
-        amount: 18500,
-        category: 'Venue',
+        amount: 35000,
+        category: 'avAndTech',
       },
     });
     assert(status === 200, `Expected 200, got ${status} — ${json?.message}`);
     return `${ms}ms`;
   });
 
-  await runStep('6.3 POST /tasks creates event task', async () => {
+  await runStep('7.4 POST /tasks creates event task', async () => {
     const { status, json, ms } = await apiRequest('POST', '/tasks', {
       token: state.organizerToken,
       body: {
@@ -331,7 +464,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('6.4 PATCH /tasks/:id/status marks task completed', async () => {
+  await runStep('7.5 PATCH /tasks/:id/status marks task completed', async () => {
     const { status, json, ms } = await apiRequest('PATCH', `/tasks/${state.taskId}/status`, {
       token: state.organizerToken,
       body: { status: 'completed' },
@@ -340,7 +473,16 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('6.5 GET /admin/analytics/event/:eventId returns analytics', async () => {
+  await runStep('7.6 GET /registrations returns event roster for organizer', async () => {
+    const { status, json, ms } = await apiRequest('GET', `/registrations?eventId=${state.eventId}`, {
+      token: state.organizerToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(Array.isArray(json?.data?.registrations), 'Expected registrations array');
+    return `${ms}ms`;
+  });
+
+  await runStep('7.7 GET /admin/analytics/event/:eventId returns analytics', async () => {
     const { status, json, ms } = await apiRequest('GET', `/admin/analytics/event/${state.eventId}`, {
       token: state.organizerToken,
     });
@@ -348,9 +490,9 @@ async function main() {
     return `${ms}ms`;
   });
 
-  // PHASE 7: Feedback, Notifications & Audit Logs
-  section('Phase 7: Completion, Feedback, Notifications & Audit Logs');
-  await runStep('7.1 PATCH /events/:id/complete marks event completed', async () => {
+  // PHASE 8: Feedback, Notifications & Audit Logs
+  section('Phase 8: Completion, Feedback, Notifications & Audit Logs');
+  await runStep('8.1 PATCH /events/:id/complete marks event completed', async () => {
     const { status, json, ms } = await apiRequest('PATCH', `/events/${state.eventId}/complete`, {
       token: state.organizerToken,
     });
@@ -358,7 +500,7 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('7.2 POST /feedback submits attendee rating & review', async () => {
+  await runStep('8.2 POST /feedback submits attendee rating & review', async () => {
     const { status, json, ms } = await apiRequest('POST', '/feedback', {
       token: state.attendeeToken,
       body: {
@@ -371,15 +513,33 @@ async function main() {
     return `${ms}ms`;
   });
 
-  await runStep('7.3 GET /notifications fetches attendee notifications', async () => {
-    const { status, ms } = await apiRequest('GET', '/notifications', {
+  await runStep('8.3 GET /feedback/event/:eventId retrieves event review stream', async () => {
+    const { status, json, ms } = await apiRequest('GET', `/feedback/event/${state.eventId}`);
+    assert(status === 200, `Expected 200, got ${status}`);
+    assert(Array.isArray(json?.data?.reviews), 'Expected reviews array');
+    return `${ms}ms`;
+  });
+
+  await runStep('8.4 GET /notifications fetches attendee notifications', async () => {
+    const { status, json, ms } = await apiRequest('GET', '/notifications', {
+      token: state.attendeeToken,
+    });
+    assert(status === 200, `Expected 200, got ${status}`);
+    if (json?.data?.notifications?.length > 0) {
+      state.notificationId = json.data.notifications[0]._id;
+    }
+    return `${ms}ms`;
+  });
+
+  await runStep('8.5 PATCH /notifications/read-all marks all notifications read', async () => {
+    const { status, json, ms } = await apiRequest('PATCH', '/notifications/read-all', {
       token: state.attendeeToken,
     });
     assert(status === 200, `Expected 200, got ${status}`);
     return `${ms}ms`;
   });
 
-  await runStep('7.4 GET /admin/audit-logs fetches security audit trail', async () => {
+  await runStep('8.6 GET /admin/audit-logs fetches security audit trail', async () => {
     const { status, ms } = await apiRequest('GET', '/admin/audit-logs', {
       token: state.adminToken,
     });

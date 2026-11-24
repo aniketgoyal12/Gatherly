@@ -11,7 +11,7 @@ import asyncHandler from '../utils/asyncHandler.js';
  * Organizer Event Analytics Dashboard (Workflow 7)
  */
 export const getEventAnalytics = asyncHandler(async (req, res) => {
-  const { eventId } = req.params;
+  const eventId = req.params.eventId || req.params.id;
 
   const event = await Event.findById(eventId);
   if (!event) {

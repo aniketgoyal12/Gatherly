@@ -71,6 +71,10 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },

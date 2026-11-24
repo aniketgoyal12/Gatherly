@@ -35,18 +35,18 @@
 
 | [ ] | Task ID | Task Description | Owner | Priority | Status | Branch | PR Link |
 | :---: | :---: | :--- | :--- | :---: | :---: | :--- | :--- |
-| [ ] | `TSK-S2-01` | Implement `User` model, Bcrypt password hashing, and indexing (`email` unique) | Database Lead | M | Backlog | `feat/user-model` | - |
-| [ ] | `TSK-S2-02` | Create Auth endpoints: `/api/v1/auth/register`, `/login`, `/logout`, `/refresh-token` | Backend Lead | M | Backlog | `feat/auth-endpoints` | - |
-| [ ] | `TSK-S2-03` | Build `authMiddleware` and `requireRole(['admin','organizer','attendee','staff'])` | Backend Lead | M | Backlog | `feat/rbac-middleware` | - |
-| [ ] | `TSK-S2-04` | Implement Client Auth UI: Login, Registration, Password Reset, and Role Selector | Frontend Lead | M | Backlog | `feat/auth-ui` | - |
-| [ ] | `TSK-S2-05` | Implement `Event` and `Venue` Mongoose schemas with status validation enum | Database Lead | M | Backlog | `feat/event-schema` | - |
-| [ ] | `TSK-S2-06` | Build Event CRUD endpoints: Create, Read, Update, Delete with ownership check | Backend Lead | M | Backlog | `feat/event-crud-api` | - |
-| [ ] | `TSK-S2-07` | Implement Event Lifecycle state machine (`draft` -> `pending_approval` -> `published`) | Backend Lead | M | Backlog | `feat/event-lifecycle` | - |
-| [ ] | `TSK-S2-08` | Build Super Admin Event Approval dashboard and moderation toggle endpoints | Frontend / Backend | H | Backlog | `feat/admin-approval-ui` | - |
-| [ ] | `TSK-S2-09` | Build Organizer Event Creation wizard with multi-step forms and ticket tiers | Frontend Lead | M | Backlog | `feat/event-wizard-ui` | - |
-| [ ] | `TSK-S2-10` | Implement Public Event Discovery page with category filters, date picker, search bar | Frontend Lead | H | Backlog | `feat/discovery-ui` | - |
-| [ ] | `TSK-S2-11` | Build cloud image upload pipeline (Cloudinary/S3) for event banners and posters | Integrations Lead | H | Backlog | `feat/banner-uploads` | - |
-| [ ] | `TSK-S2-12` | Write unit tests for Auth controller, JWT verification, and Event CRUD APIs | QA/DevOps Lead | M | Backlog | `test/auth-events` | - |
+| [x] | `TSK-S2-01` | Implement `User` model, Bcrypt password hashing, and indexing (`email` unique) | Database Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-02` | Create Auth endpoints: `/api/v1/auth/register`, `/login`, `/logout`, `/refresh-token` | Backend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-03` | Build `authMiddleware` and `requireRole(['admin','organizer','attendee','staff'])` | Backend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-04` | Implement Client Auth UI: Login, Registration, Password Reset, and Role Selector | Frontend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-05` | Implement `Event` and `Venue` Mongoose schemas with status validation enum | Database Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-06` | Build Event CRUD endpoints: Create, Read, Update, Delete with ownership check | Backend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-07` | Implement Event Lifecycle state machine (`draft` -> `pending_approval` -> `published`) | Backend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-08` | Build Super Admin Event Approval dashboard and moderation toggle endpoints | Frontend / Backend | H | Done | `main` | - |
+| [x] | `TSK-S2-09` | Build Organizer Event Creation wizard with multi-step forms and ticket tiers | Frontend Lead | M | Done | `main` | - |
+| [x] | `TSK-S2-10` | Implement Public Event Discovery page with category filters, date picker, search bar | Frontend Lead | H | Done | `main` | - |
+| [x] | `TSK-S2-11` | Build cloud image upload pipeline (Cloudinary/S3) for event banners and posters | Integrations Lead | H | Done | `main` | - |
+| [x] | `TSK-S2-12` | Write unit tests for Auth controller, JWT verification, and Event CRUD APIs | QA/DevOps Lead | M | Done | `main` | - |
 
 ---
 
@@ -56,17 +56,17 @@
 
 | [ ] | Task ID | Task Description | Owner | Priority | Status | Branch | PR Link |
 | :---: | :---: | :--- | :--- | :---: | :---: | :--- | :--- |
-| [ ] | `TSK-S3-01` | Implement `Registration`, `Ticket`, and `Payment` Mongoose models | Database Lead | M | Backlog | `feat/reg-ticket-models` | - |
-| [ ] | `TSK-S3-02` | Build atomic seat reservation endpoint with `$inc` and remaining capacity filter | Backend Lead | M | Backlog | `feat/atomic-reservation` | - |
-| [ ] | `TSK-S3-03` | Integrate Razorpay Orders API: create order with currency `INR` and receipt ID | Integrations Lead | M | Backlog | `feat/razorpay-orders` | - |
+| [x] | `TSK-S3-01` | Implement `Registration`, `Ticket`, and `Payment` Mongoose models | Database Lead | M | Complete | `main` | #1 |
+| [x] | `TSK-S3-02` | Build atomic seat reservation endpoint with `$inc` and remaining capacity filter | Backend Lead | M | Complete | `main` | #1 |
+| [x] | `TSK-S3-03` | Integrate Razorpay Orders API: create order with currency `INR` and receipt ID | Integrations Lead | M | Complete | `main` | #1 |
 | [ ] | `TSK-S3-04` | Embed Razorpay Standard Checkout in React frontend with payment modal handler | Frontend Lead | M | Backlog | `feat/checkout-modal` | - |
-| [ ] | `TSK-S3-05` | Build Razorpay Webhook listener with HMAC SHA-256 signature verification | Integrations Lead | M | Backlog | `feat/payment-webhook` | - |
-| [ ] | `TSK-S3-06` | Implement webhook idempotency using `payments` collection and unique `paymentId` | Integrations Lead | M | Backlog | `feat/webhook-idempotent` | - |
-| [ ] | `TSK-S3-07` | Implement QR generation service: create JWT token, compute SHA-256 hash, store hash | Integrations Lead | M | Backlog | `feat/qr-generator` | - |
+| [x] | `TSK-S3-05` | Build Razorpay Webhook listener with HMAC SHA-256 signature verification | Integrations Lead | M | Complete | `main` | #1 |
+| [x] | `TSK-S3-06` | Implement webhook idempotency using `payments` collection and unique `paymentId` | Integrations Lead | M | Complete | `main` | #1 |
+| [x] | `TSK-S3-07` | Implement QR generation service: create JWT token, compute SHA-256 hash, store hash | Integrations Lead | M | Complete | `main` | #1 |
 | [ ] | `TSK-S3-08` | Build Attendee "My Tickets" view with offline QR view and PDF download button | Frontend Lead | M | Backlog | `feat/attendee-tickets-ui` | - |
 | [ ] | `TSK-S3-09` | Build Event Staff QR Scanner interface (html5-qrcode) with camera access | Frontend Lead | M | Backlog | `feat/staff-scanner-ui` | - |
-| [ ] | `TSK-S3-10` | Implement staff check-in validation API with atomic status update (`checked_in`) | Backend Lead | M | Backlog | `feat/checkin-validate` | - |
-| [ ] | `TSK-S3-11` | Build automated refund trigger for cancelled events and refund policy enforcement | Integrations Lead | H | Backlog | `feat/refund-engine` | - |
+| [x] | `TSK-S3-10` | Implement staff check-in validation API with atomic status update (`checked_in`) | Backend Lead | M | Complete | `main` | #1 |
+| [x] | `TSK-S3-11` | Build automated refund trigger for cancelled events and refund policy enforcement | Integrations Lead | H | Complete | `main` | #1 |
 | [ ] | `TSK-S3-12` | Concurrency & stress testing for race conditions (100 simultaneous bookings on 5 seats)| QA/DevOps Lead | M | Backlog | `test/concurrency-race` | - |
 
 ---

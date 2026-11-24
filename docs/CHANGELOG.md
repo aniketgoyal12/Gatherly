@@ -1,20 +1,45 @@
 # Changelog: Gatherly
 
-> **Last updated:** 2026-11-16  
+> **Last updated:** 2026-11-23  
 > **Owner:** QA & DevOps Lead  
 > **Format:** Based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), following [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.3.0] - 2026-11-23
 
-### Planned for Sprint 2 (v0.2.0)
-- **Added:** User registration, login, logout, and token refresh endpoints with JWT and HTTP-only cookies.
-- **Added:** Role-based access control (RBAC) middleware verifying roles (`admin`, `organizer`, `attendee`, `staff`).
-- **Added:** Event CRUD endpoints with state machine (`draft`, `pending_approval`, `published`, `rejected`, `completed`, `cancelled`).
-- **Added:** Public event discovery page with search and category filtering in React client.
-- **Changed:** Express server error handler to return standardized error format.
-- **Security:** Password hashing enforcement with bcrypt (salt rounds = 12).
+### Fixed & Aligned
+- **Route Conflicts Resolved:**
+  - Moved budget endpoints to `/api/v1/events/:eventId/budget` and `/api/v1/events/:eventId/budget/expenses` declared before generic `/:id`.
+  - Canonical API names aligned: `/api/v1/ai/event-plan`, `/api/v1/events/:id/approval`, `/api/v1/waitlist`.
+  - Fixed duplicate `/events` route to perform a 301/permanent redirect to `/search`.
+  - Added `/events/:id/analytics` with organizer ownership check and super_admin access.
+  - Eliminated fallback from staff assigned events to public events.
+  - Redesigned staff scanner to mount on `/staff/scanner/:eventId` with an inline live verification modal overlay to prevent state loss on refresh.
+- **Access Control & Security:**
+  - Restricted `/checkout/:id` to `attendee` role only.
+  - Blocked suspended accounts at login and on every protected request.
+  - Removed public signup role dropdown (public signup creates attendee; separate toggle allows direct organizer registration with active account status).
+  - Staff self-signup blocked; staff are added by email by event organizers with optional gate assignment and temporary passwords.
+  - Super Admin accounts restricted to seeder script execution only.
+  - Cryptographic ticket token design: `signedTicketToken` HMAC SHA-256 enables offline and online QR validation without storing predictable booking IDs.
+  - Implemented `returnUrl` query parameter handling on `/login` to preserve user booking destination.
+  - Restricted event updates to events in `draft` or `rejected` status.
+- **Schema & Pricing Adjustments:**
+  - Added optional `phone` field to `User` schema.
+  - Added optional `gate` field to `EventStaff` junction schema.
+  - Strictly eliminated convenience fees across the checkout UI, API requests, and specifications (total payable equals ticket price).
+- **New MVP Screens Added:**
+  - `VerifyEmail.tsx` (`/verify-email/:token`)
+  - `ResetPassword.tsx` (`/reset-password/:token`)
+  - `UniversalProfile.tsx` (`/profile` for all roles)
+  - `Forbidden.tsx` (`/403`)
+  - `NotFound.tsx` (`/404`)
+  - `EditEvent.tsx` (`/organizer/events/:id/edit`)
+  - `EventStaffAssignment.tsx` (`/organizer/events/:id/staff`)
+  - `PaymentSuccess.tsx` (`/payment/success`)
+  - `PaymentFailure.tsx` (`/payment/failure`)
+  - Cancel Booking modal with refund dispatch on `/my-tickets`.
 
 ---
 

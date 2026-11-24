@@ -14,6 +14,11 @@ const eventStaffSchema = new mongoose.Schema(
       required: [true, 'User ID is required'],
       index: true,
     },
+    gate: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,

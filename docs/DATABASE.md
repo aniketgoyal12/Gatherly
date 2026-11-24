@@ -418,3 +418,4 @@ Many-to-Many junction tracking contracted vendors assigned to specific events.
 | `v1.0.1` | 2026-11-16 | `tickets` | Added `qrTokenHash` (`SHA-256`) to store hashed tokens rather than raw JWT | Integrations Lead | Approved |
 | `v1.0.2` | 2026-11-16 | `payments` | Added `webhookEvents` string array to enforce idempotency on retried hooks | Backend Lead | Approved |
 | `v1.0.3` | 2026-11-16 | `registrations` | Added TTL index on `expiresAt` for automatic cleanup of abandoned holds | Database Lead | Approved |
+| `v1.0.4` | 2026-11-23 | `users`, `eventStaff`, `tickets` | Added `phone` to `users`, `gate` to `eventStaff`, `signedTicketToken` HMAC to `tickets`; removed convenience fees from checkout | Architect Lead | Approved |

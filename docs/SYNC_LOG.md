@@ -22,15 +22,13 @@
 ## Latest Sync
 
 <!-- LATEST_SYNC_START -->
-- **Date / Time:** 2026-11-18 15:22:58 IST
+- **Date / Time:** 2026-11-20 12:33:29 IST
 - **Puller:** aniketgoyal12
 - **Branch:** `main`
-- **Commit Range:** `100cf66` -> `4f02116`
-- **Commits Pulled:** 4
-- **Files Changed:** 25 files (`+24` added, `~1` modified, `-0` deleted)
-- **High-Impact Detections:**
-  - ⚠️ Dependencies changed (`package.json`) -> Run: `npm install`
-  - ⚠️ Environment templates updated -> Check `.env.example` & update `.env`
+- **Commit Range:** `06cccb0` -> `720a46c`
+- **Commits Pulled:** 1
+- **Files Changed:** 16 files (`+14` added, `~2` modified, `-0` deleted)
+- **High-Impact Detections:** None (Safe standard update)
 <!-- LATEST_SYNC_END -->
 
 ### Team Catch-up Checklist
@@ -47,6 +45,20 @@ After every sync, check the items relevant to your role:
 ## Sync History
 
 <!-- SYNC_HISTORY_START -->
+
+### Sync Entry: 2026-11-20 12:33:29 IST (`main`)
+- **Puller:** aniketgoyal12
+- **Commit Range:** `06cccb0...720a46c` (1 commits)
+- **Authors:** JIYA JESWANI
+
+| Date / Time | Puller | Branch | Commits Pulled | Authors | Summary of Changes | Files Added | Files Modified | Files Deleted | Docs Updated? |
+| :---: | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :---: |
+| 2026-11-20 12:33:29 | aniketgoyal12 | `main` | 1 | JIYA JESWANI | Frontend : added navbar, header and footer | 14 | 2 | 0 | No |
+
+#### What's New in This Sync
+
+- **`other`**:
+  - `720a46c` Frontend : added navbar, header and footer
 
 ### Sync Entry: 2026-11-18 15:22:58 IST (`main`)
 - **Puller:** aniketgoyal12

@@ -8,11 +8,21 @@ import asyncHandler from '../utils/asyncHandler.js';
  * Set or Update Total Event Budget (Workflow 3)
  */
 export const setBudget = asyncHandler(async (req, res) => {
-  const { eventId, totalBudget, expenseCategories } = req.body;
+  const eventId = req.params.eventId || req.body.eventId;
+  const { totalBudget, expenseCategories } = req.body;
+
+  if (!eventId) {
+    throw new ApiError(400, 'Event ID is required');
+  }
 
   const event = await Event.findById(eventId);
   if (!event) {
     throw new ApiError(404, 'Event not found');
+  }
+
+  // Ownership verification
+  if (event.organizerId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not have permission to manage budget for this event');
   }
 
   let budget = await Budget.findOne({ eventId });
@@ -36,7 +46,12 @@ export const setBudget = asyncHandler(async (req, res) => {
  * Record Actual Expense (Workflow 3)
  */
 export const addActualExpense = asyncHandler(async (req, res) => {
-  const { eventId, title, amount, category } = req.body;
+  const eventId = req.params.eventId || req.body.eventId;
+  const { title, amount, category } = req.body;
+
+  if (!eventId) {
+    throw new ApiError(400, 'Event ID is required');
+  }
 
   const budget = await Budget.findOne({ eventId });
   if (!budget) {
@@ -77,7 +92,8 @@ export const addActualExpense = asyncHandler(async (req, res) => {
  * Get Budget by Event ID (Workflow 3)
  */
 export const getBudgetByEvent = asyncHandler(async (req, res) => {
-  const budget = await Budget.findOne({ eventId: req.params.eventId });
+  const eventId = req.params.eventId || req.params.id;
+  const budget = await Budget.findOne({ eventId });
   if (!budget) {
     return res.status(200).json(new ApiResponse(200, { budget: null }, 'No budget defined yet for this event'));
   }

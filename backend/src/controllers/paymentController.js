@@ -2,14 +2,75 @@ import Payment from '../models/Payment.js';
 import Registration from '../models/Registration.js';
 import Ticket from '../models/Ticket.js';
 import Event from '../models/Event.js';
+import User from '../models/User.js';
 import Waitlist from '../models/Waitlist.js';
 import Notification from '../models/Notification.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { verifyPaymentSignature, verifyWebhookSignature } from '../config/razorpay.js';
-import { generateSecureQrToken, hashToken } from '../utils/hashQr.js';
+import { createOrder, verifyPaymentSignature, verifyWebhookSignature } from '../config/razorpay.js';
+import { createSignedTicketToken, hashToken } from '../utils/hashQr.js';
 import { emitToRoom } from '../config/socket.js';
+import { enqueueTicketEmail } from '../jobs/ticketEmailQueue.js';
+
+/**
+ * Create Payment Order (/api/v1/payments/create-order)
+ */
+export const createPaymentOrder = asyncHandler(async (req, res) => {
+  const { registrationId } = req.body;
+
+  const registration = await Registration.findById(registrationId).populate('eventId');
+  if (!registration) {
+    throw new ApiError(404, 'Registration not found');
+  }
+
+  if (registration.userId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not own this registration');
+  }
+
+  const event = registration.eventId;
+  const amount = event.ticketPrice || 0;
+
+  let payment = await Payment.findOne({ registrationId });
+  let orderId = payment?.gatewayOrderId;
+
+  if (!orderId) {
+    const rzpOrder = await createOrder({
+      amount,
+      currency: 'INR',
+      receipt: `reg_${registration._id}`,
+    });
+    orderId = rzpOrder.id;
+
+    if (payment) {
+      payment.gatewayOrderId = orderId;
+      payment.amount = amount;
+      await payment.save();
+    } else {
+      payment = await Payment.create({
+        registrationId,
+        amount,
+        currency: 'INR',
+        gatewayOrderId: orderId,
+        paymentStatus: 'created',
+      });
+    }
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        orderId,
+        amount,
+        currency: 'INR',
+        registrationId,
+        keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+      },
+      'Payment order created successfully'
+    )
+  );
+});
 
 /**
  * Verify Client Payment Callback (Workflow 8)
@@ -64,15 +125,14 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   registration.bookingStatus = 'confirmed';
   await registration.save();
 
-  // 6. Generate secure random QR token and store SHA-256 hash
-  const rawQrToken = generateSecureQrToken();
-  const tokenHash = hashToken(rawQrToken);
-
-  const ticket = await Ticket.create({
+  // 6. Generate secure signed ticket token and store HMAC hash
+  const ticket = new Ticket({
     registrationId: registration._id,
-    tokenHash,
     ticketStatus: 'valid',
   });
+  const signedToken = createSignedTicketToken(ticket._id, registration._id, registration.userId);
+  ticket.tokenHash = hashToken(signedToken);
+  await ticket.save();
 
   // 7. Dispatch confirmation notification
   await Notification.create({
@@ -87,6 +147,21 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     eventId: registration.eventId,
   });
 
+  // Asynchronously dispatch email with QR code
+  const attendeeUser = await User.findById(registration.userId);
+  const eventDetails = await Event.findById(registration.eventId);
+  if (attendeeUser?.email && eventDetails) {
+    enqueueTicketEmail({
+      to: attendeeUser.email,
+      attendeeName: attendeeUser.name,
+      eventTitle: eventDetails.title,
+      eventDate: eventDetails.startDate,
+      ticketId: ticket._id,
+      ticketType: registration.ticketType,
+      rawQrToken: signedToken,
+    });
+  }
+
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -95,38 +170,36 @@ export const verifyPayment = asyncHandler(async (req, res) => {
         ticket: {
           id: ticket._id,
           ticketStatus: ticket.ticketStatus,
-          rawQrToken, // Rendered as QR code on client
+          rawQrToken: signedToken,
         },
       },
-      'Payment verified successfully and ticket issued'
+      'Payment verified and ticket generated successfully'
     )
   );
 });
 
 /**
- * Razorpay Webhook Ingestion Handler (Workflow 4 & 8)
+ * Razorpay Webhook Handler (Workflow 8 - Server-to-Server Fallback)
  */
 export const handleWebhook = asyncHandler(async (req, res) => {
-  const signature = req.headers['x-razorpay-signature'];
-  const rawBody = req.body;
+  const webhookSignature = req.headers['x-razorpay-signature'];
+  const webhookBody = req.body;
 
-  // 1. Verify Webhook Signature
-  if (signature && !verifyWebhookSignature(rawBody, signature)) {
-    console.warn('[Webhook] Warning: Invalid webhook signature received.');
-    return res.status(400).json({ success: false, message: 'Invalid signature' });
+  const isValidWebhook = verifyWebhookSignature(JSON.stringify(webhookBody), webhookSignature);
+  if (!isValidWebhook) {
+    return res.status(400).json({ status: 'failure', message: 'Invalid webhook signature' });
   }
 
-  const eventType = rawBody.event;
-  const paymentPayload = rawBody.payload?.payment?.entity;
+  const { event: webhookEvent, payload } = webhookBody;
 
-  console.log(`[Webhook] Event received: ${eventType}`);
+  if (webhookEvent === 'payment.captured') {
+    const paymentEntity = payload.payment.entity;
+    const orderId = paymentEntity.order_id;
+    const paymentId = paymentEntity.id;
 
-  if (eventType === 'payment.captured' && paymentPayload) {
-    const orderId = paymentPayload.order_id;
     const payment = await Payment.findOne({ gatewayOrderId: orderId });
-
     if (payment && payment.paymentStatus !== 'paid') {
-      payment.gatewayPaymentId = paymentPayload.id;
+      payment.gatewayPaymentId = paymentId;
       payment.paymentStatus = 'paid';
       await payment.save();
 
@@ -135,116 +208,80 @@ export const handleWebhook = asyncHandler(async (req, res) => {
         registration.bookingStatus = 'confirmed';
         await registration.save();
 
-        const rawQrToken = generateSecureQrToken();
-        const tokenHash = hashToken(rawQrToken);
-
-        await Ticket.create({
+        const ticket = new Ticket({
           registrationId: registration._id,
-          tokenHash,
           ticketStatus: 'valid',
         });
+        const signedToken = createSignedTicketToken(ticket._id, registration._id, registration.userId);
+        ticket.tokenHash = hashToken(signedToken);
+        await ticket.save();
 
         await Notification.create({
           userId: registration.userId,
-          title: 'Ticket Confirmed (Webhook)',
-          message: 'Your payment was captured via gateway webhook.',
-          type: 'ticket_confirmed',
+          title: 'Payment Confirmed via Gateway Webhook',
+          message: 'Your payment was successfully received. View your ticket in My Tickets.',
+          type: 'payment_alert',
         });
-      }
-    }
-  } else if (eventType === 'refund.processed' || eventType === 'payment.refunded') {
-    // Workflow 4: Refund processed webhook
-    const paymentId = paymentPayload?.id;
-    const payment = await Payment.findOne({ gatewayPaymentId: paymentId });
-
-    if (payment && payment.paymentStatus !== 'refunded') {
-      payment.paymentStatus = 'refunded';
-      await payment.save();
-
-      // Invalidate ticket & registration
-      await Ticket.updateOne({ registrationId: payment.registrationId }, { $set: { ticketStatus: 'refunded' } });
-      await Registration.updateOne({ _id: payment.registrationId }, { $set: { bookingStatus: 'cancelled' } });
-
-      // Check if there is a waitlist for this event to offer released seat (Workflow 4)
-      const reg = await Registration.findById(payment.registrationId);
-      if (reg) {
-        const nextInWaitlist = await Waitlist.findOne({ eventId: reg.eventId, status: 'waiting' }).sort({ position: 1 });
-        if (nextInWaitlist) {
-          nextInWaitlist.status = 'offered';
-          await nextInWaitlist.save();
-
-          await Notification.create({
-            userId: nextInWaitlist.userId,
-            title: 'Seat Available!',
-            message: 'A seat has opened up for your waitlisted event. Please complete registration.',
-            type: 'event_update',
-          });
-        }
       }
     }
   }
 
-  // Always respond 200 OK to prevent Razorpay retries
-  return res.status(200).json({ received: true });
+  return res.status(200).json({ status: 'ok', received: true });
 });
 
 /**
- * Attendee / Organizer Initiates Ticket Cancellation & Refund (Workflow 4)
+ * Request Refund (Workflow 4 & 8)
  */
 export const requestRefund = asyncHandler(async (req, res) => {
   const { registrationId, reason } = req.body;
 
-  const registration = await Registration.findById(registrationId).populate('eventId');
+  const registration = await Registration.findById(registrationId);
   if (!registration) {
     throw new ApiError(404, 'Registration not found');
   }
 
-  // Authorization check
-  if (registration.userId.toString() !== req.user._id.toString() && req.user.role !== 'organizer' && req.user.role !== 'super_admin') {
-    throw new ApiError(403, 'Forbidden: You cannot cancel this ticket');
+  if (registration.userId.toString() !== req.user._id.toString() && req.user.role !== 'super_admin') {
+    throw new ApiError(403, 'Forbidden: You do not own this registration');
   }
 
-  // Check cancellation deadline (must be before event start date)
-  if (new Date() >= new Date(registration.eventId.startDate)) {
-    throw new ApiError(400, 'Cancellation deadline has passed. Event has already commenced.');
-  }
-
-  const payment = await Payment.findOne({ registrationId });
+  const payment = await Payment.findOne({ registrationId, paymentStatus: 'paid' });
   if (!payment) {
-    throw new ApiError(404, 'Payment record not found for this registration');
+    throw new ApiError(400, 'No paid transaction found for this registration');
   }
 
-  if (payment.paymentStatus !== 'paid') {
-    throw new ApiError(400, `Cannot refund payment with status '${payment.paymentStatus}'`);
-  }
-
-  // Mark payment as refund_pending (Workflow 4)
   payment.paymentStatus = 'refund_pending';
   await payment.save();
 
-  // Invalidate ticket
-  await Ticket.updateOne({ registrationId: registration._id }, { $set: { ticketStatus: 'cancelled' } });
   registration.bookingStatus = 'cancelled';
   await registration.save();
 
-  // Notify attendee
+  await Ticket.findOneAndUpdate(
+    { registrationId: registration._id },
+    { $set: { ticketStatus: 'cancelled' } }
+  );
+
   await Notification.create({
     userId: registration.userId,
-    title: 'Refund Request Received',
-    message: `Your cancellation request for "${registration.eventId.title}" has been registered. Refund is processing.`,
+    title: 'Refund Request Submitted',
+    message: `Your refund request for ₹${payment.amount} has been logged and is pending bank processing.`,
     type: 'payment_alert',
   });
 
   return res.status(200).json(
     new ApiResponse(
       200,
-      { paymentId: payment._id, status: 'refund_pending' },
-      'Ticket cancelled and refund marked as pending.'
+      {
+        paymentStatus: payment.paymentStatus,
+        refundAmount: payment.amount,
+        registrationStatus: registration.bookingStatus,
+      },
+      'Refund request received and scheduled for processing'
     )
   );
 });
 
 export default {
+  createPaymentOrder,
   verifyPayment,
   handleWebhook,
   requestRefund,

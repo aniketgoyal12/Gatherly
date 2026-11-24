@@ -11,6 +11,10 @@ import notificationRoutes from './notificationRoutes.js';
 import vendorRoutes from './vendorRoutes.js';
 import adminRoutes from './adminRoutes.js';
 import aiRoutes from './aiRoutes.js';
+import { joinWaitlist } from '../controllers/registrationController.js';
+import { protect } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import { joinWaitlistSchema } from '../validators/registrationValidator.js';
 
 const router = Router();
 
@@ -27,6 +31,9 @@ router.use('/notifications', notificationRoutes);
 router.use('/vendors', vendorRoutes);
 router.use('/admin', adminRoutes);
 router.use('/ai', aiRoutes);
+
+// Plan specifies /api/v1/waitlist top-level endpoint
+router.post('/waitlist', protect, validate(joinWaitlistSchema), joinWaitlist);
 
 // Health check endpoint
 router.get('/health', (req, res) => {

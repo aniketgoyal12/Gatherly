@@ -52,34 +52,42 @@ const seedDatabase = async () => {
       {
         name: 'Super Admin',
         email: 'admin@gatherly.com',
+        phone: '+91 98111 00001',
         passwordHash,
         role: 'super_admin',
         interests: ['platform_governance', 'analytics', 'moderation'],
         accountStatus: 'active',
+        isEmailVerified: true,
       },
       {
         name: 'Aarav Sharma (Organizer)',
         email: 'organizer@gatherly.com',
+        phone: '+91 98222 00002',
         passwordHash,
         role: 'organizer',
         interests: ['tech', 'music', 'conferences'],
         accountStatus: 'active',
+        isEmailVerified: true,
       },
       {
         name: 'Rohan Verma (Attendee)',
         email: 'attendee@gatherly.com',
+        phone: '+91 98333 00003',
         passwordHash,
         role: 'attendee',
         interests: ['tech', 'hackathons', 'ai'],
         accountStatus: 'active',
+        isEmailVerified: true,
       },
       {
         name: 'Priya Singh (Staff Scanner)',
         email: 'staff@gatherly.com',
+        phone: '+91 98444 00004',
         passwordHash,
         role: 'staff',
         interests: ['event_operations', 'security'],
         accountStatus: 'active',
+        isEmailVerified: true,
       },
     ]);
 
@@ -162,10 +170,12 @@ const seedDatabase = async () => {
       {
         eventId: eventHackathon._id,
         userId: staffUser._id,
+        gate: 'Gate A - North Concourse',
       },
       {
         eventId: eventMusic._id,
         userId: staffUser._id,
+        gate: 'Gate B - Main Entrance',
       },
     ]);
     console.log('  ✓ Staff member assigned to Hackathon & Music Fest.');

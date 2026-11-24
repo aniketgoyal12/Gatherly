@@ -20,7 +20,7 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       required: [true, 'Notification type is required'],
-      enum: ['system', 'event_update', 'ticket_confirmed', 'task_assigned', 'payment_alert', 'reminder'],
+      enum: ['system', 'event_update', 'ticket_confirmed', 'task_assigned', 'payment_alert', 'reminder', 'event_reminder', 'waitlist_promoted', 'reservation_expired'],
       default: 'system',
     },
     readStatus: {

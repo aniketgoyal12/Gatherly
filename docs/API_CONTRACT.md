@@ -1,10 +1,10 @@
 # API Contract & Endpoint Specification: Gatherly
 
-> **Last updated:** 2026-11-16  
+> **Last updated:** 2026-11-23  
 > **Owner:** Backend Lead & API Architect  
 > **Base URL:** `http://localhost:5000/api/v1` (Production: `https://api.gatherly.app/api/v1`)  
 > **AI Service Base URL:** `http://localhost:8000/ai/v1` (Proxied internally via Express)  
-> **Status Options:** `Planned` \| `In Progress` \| `Done`
+> **Status Options:** `Planned` | `In Progress` | `Done`
 
 ---
 
@@ -56,89 +56,87 @@ Authorization: Bearer <jwt_access_token>
 
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/auth/register` | Public | `{ name, email, password, role?: "organizer" \| "attendee" }` | `{ user: { id, name, email, role }, token }` | `201`, `400`, `409` | In Progress |
-| `POST` | `/auth/login` | Public | `{ email, password }` | `{ user: { id, name, email, role }, token }` | `200`, `400`, `401` | In Progress |
-| `POST` | `/auth/logout` | Authenticated | `{}` | `{ message: "Logged out successfully" }` | `200`, `401` | Planned |
-| `POST` | `/auth/refresh-token` | Public (Cookie) | `{ refreshToken }` (or via cookie) | `{ token: "new_jwt_string" }` | `200`, `401`, `403` | Planned |
-| `GET` | `/auth/me` | Authenticated | None | `{ user: { id, name, email, role, phone, avatar } }` | `200`, `401` | In Progress |
-| `PUT` | `/auth/profile` | Authenticated | `{ name?, phone?, bio?, avatarUrl? }` | `{ user: { updatedProfile } }` | `200`, `400`, `401` | Planned |
+| `POST` | `/auth/register` | Public | `{ name, email, password, phone?, role?: "organizer" \| "attendee" }` | `{ user: { id, name, email, phone, role, accountStatus }, accessToken }` | `201`, `400`, `409` | Done |
+| `POST` | `/auth/login` | Public | `{ email, password }` | `{ user: { id, name, email, role, phone, mustChangePassword }, accessToken, redirectDashboard }` | `200`, `400`, `401`, `403` | Done |
+| `POST` | `/auth/logout` | Authenticated | None | `{ message: "Logged out successfully" }` | `200`, `401` | Done |
+| `POST` | `/auth/refresh-token` | Public (Cookie) | `{ refreshToken }` (or via cookie) | `{ accessToken: "new_jwt_string" }` | `200`, `401`, `403` | Done |
+| `GET` | `/auth/me` | Authenticated | None | `{ user: { id, name, email, role, phone, interests } }` | `200`, `401` | Done |
+| `PUT` | `/auth/profile` | Authenticated | `{ name?, phone?, interests? }` | `{ user: { updatedProfile } }` | `200`, `400`, `401` | Done |
+| `POST` | `/auth/verify-email` | Public | `{ token }` | `{ email, isEmailVerified: true }` | `200`, `400` | Done |
+| `POST` | `/auth/forgot-password`| Public | `{ email }` | `{ message: "Reset token generated" }` | `200`, `400` | Done |
+| `POST` | `/auth/reset-password` | Public | `{ resetToken, newPassword }` | `{ message: "Password reset successful" }` | `200`, `400`, `404` | Done |
+| `POST` | `/auth/change-password`| Authenticated | `{ currentPassword, newPassword }` | `{ message: "Password updated successfully" }` | `200`, `401` | Done |
 
 ---
 
 ## 3. Events Module (`/api/v1/events`)
 
-Event status values: `draft`, `pending_approval`, `published`, `rejected`, `completed`, `cancelled`.
+Event status state machine: `draft` -> `pending_approval` -> `published` / `rejected` -> `completed` / `cancelled`.
 
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `GET` | `/events` | Public | Query: `?page=1&limit=10&search=&category=&status=published` | `{ events: [ ... ], pagination: { total, pages, current } }` | `200` | In Progress |
-| `GET` | `/events/:id` | Public | None | `{ event: { id, title, description, venue, tiers, organizer, status } }` | `200`, `404` | In Progress |
-| `POST` | `/events` | Organizer, Admin | `{ title, description, category, startDate, endDate, venueId, tiers: [ { name, price, capacity } ] }` | `{ event: { id, status: "draft" \| "pending_approval" } }` | `201`, `400`, `403` | In Progress |
-| `PUT` | `/events/:id` | Organizer (Owner), Admin | `{ title?, description?, startDate?, endDate?, tiers? }` | `{ event: { updatedEvent } }` | `200`, `400`, `403`, `404` | Planned |
-| `PATCH` | `/events/:id/status` | Admin | `{ status: "published" \| "rejected", reason?: string }` | `{ event: { id, status, moderationReason } }` | `200`, `400`, `403` | Planned |
-| `DELETE`| `/events/:id` | Organizer (Owner), Admin | None (Soft delete / cancel) | `{ message: "Event cancelled successfully" }` | `200`, `403`, `404` | Planned |
-| `GET` | `/events/organizer/my-events` | Organizer | Query: `?status=&page=` | `{ events: [ ... ], totalCount }` | `200`, `401` | Planned |
+| `GET` | `/events` | Public | Query: `?page=1&limit=10&search=&q=&category=&status=published` | `{ events: [ ... ], pagination: { total, pages, page } }` | `200` | Done |
+| `GET` | `/events/:id` | Public | None | `{ event: { id, title, description, venueId, organizerId, status, ticketPrice } }` | `200`, `404` | Done |
+| `POST` | `/events` | Organizer, Admin | `{ title, description, category, startDate, endDate, venueId?, capacity, ticketPrice? }` | `{ event: { id, status: "draft" } }` | `201`, `400`, `403` | Done |
+| `PUT` | `/events/:id` | Organizer (Owner), Admin | `{ title?, description?, startDate?, endDate?, capacity?, ticketPrice? }` | `{ event: { updatedEvent } }` (Only draft/rejected) | `200`, `400`, `403`, `404` | Done |
+| `PATCH`| `/events/:id/submit` | Organizer (Owner) | None | `{ event: { id, status: "pending_approval" } }` | `200`, `400`, `403` | Done |
+| `PATCH`| `/events/:id/approval`| Super Admin | `{ action: "approve" \| "reject", rejectionReason? }` | `{ event: { id, status: "published" \| "rejected" } }` | `200`, `400`, `403` | Done |
+| `PATCH`| `/events/:id/cancel` | Organizer, Admin | None | `{ event: { id, status: "cancelled" }, affectedAttendees }` | `200`, `403`, `404` | Done |
+| `PATCH`| `/events/:id/complete`| Organizer, Admin | None | `{ event: { id, status: "completed" } }` | `200`, `403`, `404` | Done |
+| `PATCH`| `/events/:id/banner` | Organizer, Admin | Multipart file: `banner` | `{ event, upload: { bannerUrl, publicId } }` | `200`, `400`, `403` | Done |
+| `GET` | `/events/:eventId/budget` | Organizer, Admin | None | `{ budget, totalActualSpent, remainingBudget }` | `200`, `403` | Done |
+| `POST` | `/events/:eventId/budget` | Organizer, Admin | `{ totalBudget, expenseCategories? }` | `{ budget }` | `200`, `400`, `403` | Done |
+| `POST` | `/events/:eventId/budget/expenses` | Organizer, Admin | `{ title, amount, category? }` | `{ budget, totalActualSpent, exceedsThreshold }` | `200`, `400`, `403` | Done |
+| `GET` | `/events/:eventId/staff` | Organizer, Admin | None | `{ staff: [ { assignmentId, gate, user } ] }` | `200`, `403` | Done |
+| `POST` | `/events/:eventId/staff` | Organizer, Admin | `{ email, gate? }` | `{ assignment, temporaryPassword? }` | `201`, `400`, `403` | Done |
+| `DELETE`| `/events/:eventId/staff/:staffId` | Organizer, Admin | None | `{ message: "Staff removed" }` | `200`, `403`, `404` | Done |
+| `GET` | `/events/:eventId/analytics` | Organizer (Owner), Admin | None | `{ eventId, totalRegistrations, checkedInAttendance, noShowPercentage, financials }` | `200`, `403`, `404` | Done |
 
 ---
 
 ## 4. Registrations & Tickets Module (`/api/v1/registrations`, `/api/v1/tickets`)
 
-Ticket status values: `valid`, `checked_in`, `cancelled`, `refunded`, `expired`.
-
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/registrations/reserve` | Attendee | `{ eventId, tierId, quantity }` | `{ registrationId, expiresAt, totalAmount, currency: "INR" }` | `201`, `400`, `409` | Planned |
-| `GET` | `/registrations/my` | Attendee | None | `{ registrations: [ { id, event, status, paymentStatus } ] }` | `200`, `401` | Planned |
-| `GET` | `/tickets/my-tickets` | Attendee | Query: `?status=valid` | `{ tickets: [ { id, ticketCode, event, qrData, status } ] }` | `200`, `401` | Planned |
-| `GET` | `/tickets/:id/qr` | Attendee, Staff | None | `{ qrCodeImageUrl, tokenString, expiresAt }` | `200`, `403`, `404` | Planned |
-| `POST` | `/tickets/check-in` | Staff, Organizer, Admin | `{ qrToken: "jwt_qr_payload" }` | `{ success: true, ticket: { id, attendeeName, tier, checkedInAt } }` | `200`, `400`, `409` | Planned |
-| `POST` | `/tickets/manual-checkin` | Staff, Organizer, Admin | `{ ticketCode: "GT-9281A", reason: "Cracked screen" }` | `{ ticket: { id, status: "checked_in" }, staffNotes }` | `200`, `400`, `404` | Planned |
+| `POST` | `/registrations/reserve` | Attendee | `{ eventId, ticketType?: "free" \| "standard" \| "vip" }` | `{ registrationId, orderId?, amount?, ticket? }` | `200`, `201`, `400`, `409` | Done |
+| `POST` | `/waitlist` | Attendee | `{ eventId }` | `{ waitlist: { position, status: "waiting" } }` | `200`, `201`, `404` | Done |
+| `GET` | `/registrations/my` | Attendee | None | `{ registrations: [ { id, eventId, bookingStatus } ] }` | `200`, `401` | Done |
+| `PATCH`| `/registrations/:id/cancel` | Attendee, Admin | `{ reason? }` | `{ registration: { bookingStatus: "cancelled" }, payment }` | `200`, `400`, `403` | Done |
+| `GET` | `/registrations` | Organizer, Admin | Query: `?eventId=&status=&ticketType=` | `{ registrations: [ ... ] }` | `200`, `403` | Done |
+| `GET` | `/tickets/my-tickets` | Attendee | None | `{ tickets: [ { id, registrationId, signedTicketToken, ticketStatus } ] }` | `200`, `401` | Done |
+| `POST` | `/tickets/check-in` | Staff, Organizer, Admin | `{ qrToken, eventId }` | `{ valid: true, ticket: { id, ticketStatus: "checked_in" }, liveTotalCheckedIn }` | `200`, `400`, `403`, `404`, `409` | Done |
+| `GET` | `/tickets/staff/assigned-events` | Staff | None | `{ events: [ { id, title, startDate, assignedGate } ] }` | `200`, `403` | Done |
 
 ---
 
 ## 5. Payments Module (`/api/v1/payments`)
 
-Payment status values: `created`, `pending`, `paid`, `failed`, `refund_pending`, `refunded`, `partially_refunded`.
-
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/payments/create-order` | Attendee | `{ registrationId }` | `{ orderId: "order_123", amount: 150000, currency: "INR", key: "rzp_test_xxx" }` | `200`, `400`, `404` | Planned |
-| `POST` | `/payments/verify` | Attendee | `{ razorpay_order_id, razorpay_payment_id, razorpay_signature }` | `{ paymentStatus: "paid", tickets: [ { id, ticketCode } ] }` | `200`, `400` | Planned |
-| `POST` | `/payments/webhook` | Public (Razorpay Signature) | Razorpay Webhook Payload (`payment.captured`, `payment.failed`, etc.) | `{ received: true }` | `200`, `400` | Planned |
-| `POST` | `/payments/:id/refund` | Organizer, Admin | `{ amount?: number, reason: string }` | `{ refundId: "rfnd_123", status: "refunded", amount }` | `200`, `400`, `403` | Planned |
-| `GET` | `/payments/event/:eventId` | Organizer, Admin | Query: `?status=&page=` | `{ payments: [ ... ], grossRevenue, refundTotal }` | `200`, `403` | Planned |
+| `POST` | `/payments/create-order` | Attendee | `{ registrationId }` | `{ orderId, amount, currency: "INR", keyId }` | `200`, `403`, `404` | Done |
+| `POST` | `/payments/verify` | Attendee | `{ registrationId, razorpayOrderId, razorpayPaymentId, razorpaySignature }` | `{ paymentStatus: "paid", ticket: { id, rawQrToken, ticketStatus } }` | `200`, `400`, `404` | Done |
+| `POST` | `/payments/webhook` | Public (Razorpay HMAC) | Gateway webhook event body | `{ status: "ok", received: true }` | `200`, `400` | Done |
+| `POST` | `/payments/refund` | Attendee, Admin | `{ registrationId, reason? }` | `{ paymentStatus: "refund_pending", refundAmount }` | `200`, `400`, `403` | Done |
 
 ---
 
-## 6. AI Microservice Module (`/api/v1/ai` -> `FastAPI /ai/v1`)
+## 6. AI Microservice Module (`/api/v1/ai`)
 
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `POST` | `/ai/generate-schedule` | Organizer, Admin | `{ title, description, category, durationDays, dailyStartTime, dailyEndTime }` | `{ schedule: [ { day: 1, slots: [ { time, title, speaker, room } ] } ] }` | `200`, `400`, `503` | In Progress |
-| `POST` | `/ai/estimate-budget` | Organizer, Admin | `{ attendeeCount, eventCategory, venueType, tierPricing }` | `{ estimatedTotal, breakdown: { venue, catering, av, marketing, contingency } }` | `200`, `400`, `503` | In Progress |
-| `POST` | `/ai/generate-tasks` | Organizer, Admin | `{ eventType, targetDate, scale: "small" \| "medium" \| "large" }` | `{ taskChecklist: [ { title, category, daysBeforeEvent, priority } ] }` | `200`, `400` | Planned |
-| `POST` | `/ai/predict-turnout` | Organizer, Admin | `{ eventCategory, ticketPrice, leadDays, historicalRSVP, venueCapacity }` | `{ predictedAttendance: 450, expectedTurnoutRate: 0.85, confidence: 0.91 }` | `200`, `400` | Planned |
+| `POST` | `/ai/event-plan` | Organizer, Admin | `{ eventType, targetAudience, budget, venuePreference, goals }` | `{ plan: { schedule, budgetEstimate, taskChecklist } }` | `200`, `400`, `503` | Done |
+| `POST` | `/ai/generate-plan` | Organizer, Admin | Alias for `/ai/event-plan` | Same as above | `200`, `400`, `503` | Done |
+| `POST` | `/ai/approve-plan` | Organizer, Admin | `{ planId, modifications? }` | `{ approvedPlan }` | `200`, `400` | Done |
+| `POST` | `/ai/predict-turnout` | Organizer, Admin | `{ eventCategory, capacity, ticketPrice, leadTimeDays }` | `{ predictedTurnout, turnoutRate, confidenceScore }` | `200`, `400` | Done |
 
 ---
 
-## 7. Vendors, Sponsors & Staff Tasks Module (`/api/v1/*`)
+## 7. Admin Governance Module (`/api/v1/admin`)
 
 | Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
 | :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `GET` | `/vendors` | Organizer, Admin | Query: `?category=catering&city=Mumbai` | `{ vendors: [ { id, name, category, rating, pricingRange } ] }` | `200` | Planned |
-| `POST` | `/vendors` | Admin, Organizer | `{ name, category, contactPerson, email, phone, servicesOffered }` | `{ vendor: { id, name, status: "active" } }` | `201`, `400` | Planned |
-| `POST` | `/events/:id/sponsors` | Organizer | `{ name, logoUrl, tier: "platinum" \| "gold" \| "silver", contributionAmount }` | `{ sponsor: { id, name, tier } }` | `201`, `400`, `403` | Planned |
-| `GET` | `/tasks/event/:eventId` | Staff, Organizer | Query: `?assignedTo=&status=` | `{ tasks: [ { id, title, assignedTo, priority, status, deadline } ] }` | `200`, `403` | Planned |
-| `POST` | `/tasks` | Organizer | `{ eventId, title, description, assignedTo, priority, deadline }` | `{ task: { id, title, status: "pending" } }` | `201`, `400` | Planned |
-| `PATCH` | `/tasks/:id/status` | Staff (Assignee), Organizer | `{ status: "in_progress" \| "completed" }` | `{ task: { id, status, completedAt } }` | `200`, `400`, `403` | Planned |
-
----
-
-## 8. Notifications & Feedback Module (`/api/v1/*`)
-
-| Method | Endpoint | Role Allowed | Request Body | Response Data Summary | Status Codes | Status |
-| :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| `GET` | `/notifications` | Authenticated | Query: `?unreadOnly=true` | `{ notifications: [ { id, title, body, read, link, createdAt } ] }` | `200`, `401` | Planned |
-| `PATCH` | `/notifications/:id/read` | Authenticated | None | `{ success: true, notificationId }` | `200`, `401` | Planned |
-| `POST` | `/feedback` | Attendee (Checked-in) | `{ eventId, rating: 5, categoryRatings: { content: 5, venue: 4 }, comment }` | `{ feedback: { id, createdAt } }` | `201`, `400`, `403` | Planned |
-| `GET` | `/feedback/event/:eventId` | Public / Organizer | Query: `?page=1` | `{ feedbackList: [ ... ], averageRating: 4.8 }` | `200` | Planned |
+| `GET` | `/admin/users` | Super Admin | Query: `?role=&status=&page=` | `{ users: [ { id, name, email, role, accountStatus, phone } ] }` | `200`, `403` | Done |
+| `PATCH`| `/admin/users/:id/status` | Super Admin | `{ status: "active" \| "suspended" }` | `{ user: { id, accountStatus } }` | `200`, `400`, `403` | Done |
+| `GET` | `/admin/pending-events` | Super Admin | None | `{ pendingEvents: [ ... ] }` | `200`, `403` | Done |
+| `GET` | `/admin/audit-logs` | Super Admin | Query: `?page=1&limit=20` | `{ auditLogs: [ ... ] }` | `200`, `403` | Done |
+| `GET` | `/admin/analytics/event/:eventId` | Organizer, Super Admin | None | Alias for `/events/:eventId/analytics` | `200`, `403` | Done |

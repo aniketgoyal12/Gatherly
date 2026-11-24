@@ -18,8 +18,34 @@ export const approveRejectSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+export const assignStaffSchema = z.object({
+  email: z.string().email('Valid email is required'),
+  gate: z.string().optional(),
+});
+
+export const setBudgetSchema = z.object({
+  eventId: z.string().optional(),
+  totalBudget: z.number().positive('Total budget must be a positive number'),
+  expenseCategories: z.array(
+    z.object({
+      category: z.string(),
+      allocatedAmount: z.number().min(0),
+    })
+  ).optional(),
+});
+
+export const addExpenseSchema = z.object({
+  eventId: z.string().optional(),
+  title: z.string().min(1, 'Expense title is required'),
+  amount: z.number().positive('Expense amount must be positive'),
+  category: z.string().optional(),
+});
+
 export default {
   createEventSchema,
   updateEventSchema,
   approveRejectSchema,
+  assignStaffSchema,
+  setBudgetSchema,
+  addExpenseSchema,
 };

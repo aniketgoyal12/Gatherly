@@ -7,6 +7,10 @@ export const verifyPaymentSchema = z.object({
   razorpaySignature: z.string().min(1, 'Razorpay signature is required'),
 });
 
+export const createOrderSchema = z.object({
+  registrationId: z.string().min(1, 'Registration ID is required'),
+});
+
 export const refundRequestSchema = z.object({
   registrationId: z.string().min(1, 'Registration ID is required'),
   reason: z.string().optional(),
@@ -14,5 +18,6 @@ export const refundRequestSchema = z.object({
 
 export default {
   verifyPaymentSchema,
+  createOrderSchema,
   refundRequestSchema,
 };

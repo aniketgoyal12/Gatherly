@@ -1,24 +1,79 @@
 {
   "info": {
-    "name": "Gatherly Backend API — End-to-End Test Suite",
-    "description": "Complete ordered Postman collection for Gatherly MERN Backend with automated token & ID chaining.",
+    "name": "Gatherly Backend API — Complete End-to-End Test Suite",
+    "description": "Production-grade, zero-config Postman collection for Gatherly (MERN + AI Event Management Platform). Covers all 9 modules with dynamic token chaining, negative security tests, automated QR check-in assertions, and audit logging.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000/api/v1", "type": "string" },
-    { "key": "organizerToken", "value": "", "type": "string" },
-    { "key": "adminToken", "value": "", "type": "string" },
-    { "key": "attendeeToken", "value": "", "type": "string" },
-    { "key": "staffToken", "value": "", "type": "string" },
-    { "key": "venueId", "value": "", "type": "string" },
-    { "key": "eventId", "value": "", "type": "string" },
-    { "key": "registrationId", "value": "", "type": "string" },
-    { "key": "qrToken", "value": "", "type": "string" },
-    { "key": "taskId", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "organizerToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attendeeToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "staffToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "venueId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "eventId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "registrationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "qrToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aiPlanId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "0. Health Check",
+      "name": "0. Health Check & Gateway Status",
       "item": [
         {
           "name": "0.1 API Gateway Health Check",
@@ -28,9 +83,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
-                  "pm.test('Health flag is true', () => pm.expect(res.success).to.eql(true));"
+                  "pm.test('Health flag is true', () => pm.expect(res.success).to.eql(true));",
+                  "pm.test('Service status is healthy', () => {",
+                  "  pm.expect(res.data.status).to.eql('healthy');",
+                  "  pm.expect(res.data.uptime).to.be.a('number');",
+                  "});"
                 ]
               }
             }
@@ -44,7 +103,7 @@
       ]
     },
     {
-      "name": "1. Authentication (Login All 4 Seeded Roles)",
+      "name": "1. Authentication & Seeded Roles",
       "item": [
         {
           "name": "1.1 Login — Organizer",
@@ -57,6 +116,7 @@
                   "pm.test('Organizer Login 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
                   "pm.test('Access token returned', () => pm.expect(res.data.accessToken).to.be.a('string'));",
+                  "pm.test('Role is organizer', () => pm.expect(res.data.user.role).to.eql('organizer'));",
                   "pm.environment.set('organizerToken', res.data.accessToken);",
                   "pm.collectionVariables.set('organizerToken', res.data.accessToken);"
                 ]
@@ -65,7 +125,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"organizer@gatherly.com\",\n  \"password\": \"Password@123\"\n}"
@@ -83,6 +148,7 @@
                 "exec": [
                   "pm.test('Admin Login 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
+                  "pm.test('Role is super_admin', () => pm.expect(res.data.user.role).to.eql('super_admin'));",
                   "pm.environment.set('adminToken', res.data.accessToken);",
                   "pm.collectionVariables.set('adminToken', res.data.accessToken);"
                 ]
@@ -91,7 +157,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@gatherly.com\",\n  \"password\": \"Password@123\"\n}"
@@ -109,6 +180,7 @@
                 "exec": [
                   "pm.test('Attendee Login 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
+                  "pm.test('Role is attendee', () => pm.expect(res.data.user.role).to.eql('attendee'));",
                   "pm.environment.set('attendeeToken', res.data.accessToken);",
                   "pm.collectionVariables.set('attendeeToken', res.data.accessToken);"
                 ]
@@ -117,7 +189,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"attendee@gatherly.com\",\n  \"password\": \"Password@123\"\n}"
@@ -135,6 +212,7 @@
                 "exec": [
                   "pm.test('Staff Login 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
+                  "pm.test('Role is staff', () => pm.expect(res.data.user.role).to.eql('staff'));",
                   "pm.environment.set('staffToken', res.data.accessToken);",
                   "pm.collectionVariables.set('staffToken', res.data.accessToken);"
                 ]
@@ -143,7 +221,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"staff@gatherly.com\",\n  \"password\": \"Password@123\"\n}"
@@ -159,34 +242,216 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Profile fetched 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
-                  "pm.test('Role is organizer', () => pm.expect(res.data.user.role).to.eql('organizer'));"
+                  "pm.test('Profile returns authenticated user', () => {",
+                  "  pm.expect(res.data.user).to.be.an('object');",
+                  "  pm.expect(res.data.user.email).to.eql('organizer@gatherly.com');",
+                  "});"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{organizerToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/auth/me"
           }
-        }
-      ]
-    },
-    {
-      "name": "2. Venue & Event Creation (Organizer)",
-      "item": [
+        },
         {
-          "name": "2.1 Create Venue",
+          "name": "1.6 Forgot Password Request",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Venue created 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
+                  "pm.test('Success message returned', () => pm.expect(res.success).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"attendee@gatherly.com\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. AI Event Blueprint Studio",
+      "item": [
+        {
+          "name": "2.1 Generate AI Blueprint Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Generated plan structure valid', () => {",
+                  "  pm.expect(res.data.generatedPlan).to.be.an('object');",
+                  "  pm.expect(res.data.generatedPlan.checklist).to.be.an('array');",
+                  "  pm.expect(res.data.generatedPlan.timeline).to.be.an('array');",
+                  "  pm.expect(res.data.generatedPlan.budgetSplit).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"hackathon\",\n  \"targetAudience\": \"developers\",\n  \"attendees\": 300,\n  \"budget\": 200000,\n  \"duration\": \"2 days\",\n  \"location\": \"Main Auditorium\",\n  \"goals\": \"Build prototype web and AI products\"\n}"
+            },
+            "url": "{{baseUrl}}/ai/generate-plan"
+          }
+        },
+        {
+          "name": "2.2 Approve & Save AI Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test('AI Plan approved & stored', () => {",
+                  "  pm.expect(res.data.aiPlan).to.be.an('object');",
+                  "  pm.expect(res.data.aiPlan.approved).to.eql(true);",
+                  "});",
+                  "if (res.data.aiPlan && res.data.aiPlan._id) {",
+                  "  pm.environment.set('aiPlanId', res.data.aiPlan._id);",
+                  "  pm.collectionVariables.set('aiPlanId', res.data.aiPlan._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planType\": \"comprehensive_event_blueprint\",\n  \"inputs\": {\n    \"eventType\": \"hackathon\",\n    \"attendees\": 300,\n    \"budget\": 200000\n  },\n  \"generatedPlan\": {\n    \"checklist\": [\n      \"Finalize venue agreement\",\n      \"Setup high-speed Wi-Fi network\",\n      \"Coordinate catering\"\n    ],\n    \"budgetSplit\": {\n      \"venue\": 80000,\n      \"catering\": 60000,\n      \"avAndTech\": 40000,\n      \"contingency\": 20000\n    }\n  },\n  \"applyBudget\": true\n}"
+            },
+            "url": "{{baseUrl}}/ai/approve-plan"
+          }
+        },
+        {
+          "name": "2.3 Predict Attendance Turnout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Turnout prediction generated', () => {",
+                  "  pm.expect(res.data.predictedTurnoutRate).to.be.a('number');",
+                  "  pm.expect(res.data.expectedAttendees).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/ai/predict-turnout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Venue & Event Creation (Organizer)",
+      "item": [
+        {
+          "name": "3.1 List All Venues",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Venues array returned', () => pm.expect(res.data.venues).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/venues"
+          }
+        },
+        {
+          "name": "3.2 Create Venue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test('Venue ID returned', () => pm.expect(res.data.venue._id).to.be.a('string'));",
                   "pm.environment.set('venueId', res.data.venue._id);",
                   "pm.collectionVariables.set('venueId', res.data.venue._id);"
                 ]
@@ -196,27 +461,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Test Auditorium\",\n  \"address\": \"Block C, Innovation Campus\",\n  \"capacity\": 300,\n  \"facilities\": [\"Projector\", \"High-Speed WiFi\", \"AC\"]\n}"
+              "raw": "{\n  \"name\": \"Convention Center Hall Alpha\",\n  \"address\": \"45 Tech Boulevard, Silicon Hub\",\n  \"capacity\": 500,\n  \"amenities\": [\n    \"High-speed Wi-Fi\",\n    \"AV Projector\",\n    \"Stage Lighting\",\n    \"Air Conditioning\"\n  ]\n}"
             },
             "url": "{{baseUrl}}/venues"
           }
         },
         {
-          "name": "2.2 Create Event (Draft)",
+          "name": "3.3 Create Event (Draft)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Event created 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
                   "const res = pm.response.json();",
-                  "pm.test('Status starts as draft', () => pm.expect(res.data.event.status).to.eql('draft'));",
+                  "pm.test('Event is in draft state', () => pm.expect(res.data.event.status).to.eql('draft'));",
                   "pm.environment.set('eventId', res.data.event._id);",
                   "pm.collectionVariables.set('eventId', res.data.event._id);"
                 ]
@@ -226,25 +497,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Gatherly Postman E2E Summit\",\n  \"description\": \"End-to-end automated API testing summit covering workflows and QR verification.\",\n  \"category\": \"Technology\",\n  \"venueId\": \"{{venueId}}\",\n  \"startDate\": \"2026-12-10T09:00:00.000Z\",\n  \"endDate\": \"2026-12-10T18:00:00.000Z\",\n  \"capacity\": 150,\n  \"ticketPrice\": 0\n}"
+              "raw": "{\n  \"title\": \"Gatherly Global Tech Summit 2026\",\n  \"description\": \"Annual flagship gathering of software developers, product managers, and tech leaders.\",\n  \"category\": \"Technology\",\n  \"venueId\": \"{{venueId}}\",\n  \"startDate\": \"2026-12-15T09:00:00.000Z\",\n  \"endDate\": \"2026-12-16T18:00:00.000Z\",\n  \"capacity\": 250,\n  \"ticketPrice\": 0\n}"
             },
             "url": "{{baseUrl}}/events"
           }
         },
         {
-          "name": "2.3 Submit Event for Approval",
+          "name": "3.4 Submit Event for Approval",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Event submitted 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
                   "pm.test('Status is pending_approval', () => pm.expect(res.data.event.status).to.eql('pending_approval'));"
                 ]
@@ -253,64 +530,83 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{organizerToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/events/{{eventId}}/submit"
           }
         }
       ]
     },
     {
-      "name": "3. Admin Approval & RBAC Check",
+      "name": "4. Admin Moderation & User Governance",
       "item": [
         {
-          "name": "3.1 RBAC Negative Test — Attendee Blocked From Admin Queue",
+          "name": "4.1 RBAC Negative Test — Attendee Blocked From Admin Queue (403)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Attendee gets 403 Forbidden', () => pm.response.to.have.status(403));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{attendeeToken}}" }],
-            "url": "{{baseUrl}}/admin/pending-events"
-          }
-        },
-        {
-          "name": "3.2 Admin Views Pending Events Queue",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Admin gets 200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
-            "url": "{{baseUrl}}/admin/pending-events"
-          }
-        },
-        {
-          "name": "3.3 Admin Approves Event (Publishes)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Event approved 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Status code is 403 Forbidden', () => pm.response.to.have.status(403));",
                   "const res = pm.response.json();",
-                  "pm.test('Status is now published', () => pm.expect(res.data.event.status).to.eql('published'));"
+                  "pm.test('Error message returned', () => pm.expect(res.success).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/pending-events"
+          }
+        },
+        {
+          "name": "4.2 Admin Views Pending Events Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Pending queue contains events', () => pm.expect(res.data.events).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/pending-events"
+          }
+        },
+        {
+          "name": "4.3 Admin Approves Event (Publishes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Event is published', () => pm.expect(res.data.event.status).to.eql('published'));"
                 ]
               }
             }
@@ -318,8 +614,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -327,21 +629,122 @@
             },
             "url": "{{baseUrl}}/events/{{eventId}}/review"
           }
-        }
-      ]
-    },
-    {
-      "name": "4. Attendee Discovery & Ticket Booking",
-      "item": [
+        },
         {
-          "name": "4.1 Public Event Discovery",
+          "name": "4.4 Admin Lists All Users",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Events fetched 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Users list returned', () => pm.expect(res.data.users).to.be.an('array'));",
+                  "const nonAdmin = res.data.users.find(u => u.role !== 'super_admin');",
+                  "if (nonAdmin) {",
+                  "  pm.environment.set('targetUserId', nonAdmin._id);",
+                  "  pm.collectionVariables.set('targetUserId', nonAdmin._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/users"
+          }
+        },
+        {
+          "name": "4.5 Admin Suspends User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('User account suspended', () => pm.expect(res.data.user.accountStatus).to.eql('suspended'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountStatus\": \"suspended\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/{{targetUserId}}/status"
+          }
+        },
+        {
+          "name": "4.6 Admin Reactivates User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('User account reactivated', () => pm.expect(res.data.user.accountStatus).to.eql('active'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountStatus\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/{{targetUserId}}/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Attendee Discovery & Ticket Booking",
+      "item": [
+        {
+          "name": "5.1 Public Event Discovery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Events list contains published events', () => pm.expect(res.data.events.length).to.be.above(0));"
                 ]
               }
             }
@@ -353,16 +756,40 @@
           }
         },
         {
-          "name": "4.2 Attendee Reserves Free Ticket (Generates QR)",
+          "name": "5.2 Event Details by ID",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Ticket confirmed 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
                   "const res = pm.response.json();",
-                  "pm.test('rawQrToken issued', () => pm.expect(res.data.ticket.rawQrToken).to.be.a('string'));",
+                  "pm.test('Event details returned', () => {",
+                  "  pm.expect(res.data.event._id).to.eql(pm.collectionVariables.get('eventId') || pm.environment.get('eventId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/events/{{eventId}}"
+          }
+        },
+        {
+          "name": "5.3 Attendee Reserves Free Ticket (Generates QR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test('Registration confirmed', () => pm.expect(res.data.registration.bookingStatus).to.eql('confirmed'));",
+                  "pm.test('Raw QR token returned', () => pm.expect(res.data.ticket.rawQrToken).to.be.a('string'));",
                   "pm.environment.set('registrationId', res.data.registration._id);",
                   "pm.collectionVariables.set('registrationId', res.data.registration._id);",
                   "pm.environment.set('qrToken', res.data.ticket.rawQrToken);",
@@ -374,8 +801,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{attendeeToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -385,14 +818,16 @@
           }
         },
         {
-          "name": "4.3 Duplicate Booking Negative Test",
+          "name": "5.4 Duplicate Booking Blocked Negative Test (409)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Duplicate registration blocked with 409 Conflict', () => pm.response.to.have.status(409));"
+                  "pm.test('Status code is 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test('Duplicate error prevented', () => pm.expect(res.success).to.eql(false));"
                 ]
               }
             }
@@ -400,8 +835,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{attendeeToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -411,38 +852,100 @@
           }
         },
         {
-          "name": "4.4 Attendee Views My Tickets",
+          "name": "5.5 Attendee Views My Tickets Wallet",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('My Tickets 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Tickets array contains issued ticket', () => pm.expect(res.data.tickets.length).to.be.above(0));"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{attendeeToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/tickets/my-tickets"
           }
-        }
-      ]
-    },
-    {
-      "name": "5. Gate QR Check-In & Security Tests",
-      "item": [
+        },
         {
-          "name": "5.1 Valid QR Check-In (First Scan — Allowed)",
+          "name": "5.6 Attendee Views My Registrations",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Check-in succeeded 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Registrations returned', () => pm.expect(res.data.registrations.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/registrations/my"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Gate QR Check-In & Security Tests",
+      "item": [
+        {
+          "name": "6.1 Staff Assigned Shifts & Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Events array returned', () => pm.expect(res.data.events).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/tickets/staff/assigned-events"
+          }
+        },
+        {
+          "name": "6.2 Valid QR Check-In (First Scan — 200 OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Entry granted and valid', () => pm.expect(res.data.valid).to.eql(true));",
+                  "pm.test('Ticket marked as checked_in', () => pm.expect(res.data.ticket.ticketStatus).to.eql('checked_in'));"
                 ]
               }
             }
@@ -450,8 +953,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -461,14 +970,16 @@
           }
         },
         {
-          "name": "5.2 Duplicate QR Scan Negative Test (Second Scan — Blocked)",
+          "name": "6.3 Duplicate QR Scan Blocked (Second Scan — 409 Conflict)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Duplicate QR rejected with 400/409', () => pm.expect([400, 409]).to.include(pm.response.code));"
+                  "pm.test('Status code is 409 Conflict', () => pm.response.to.have.status(409));",
+                  "const res = pm.response.json();",
+                  "pm.test('Duplicate check-in blocked', () => pm.expect(res.success).to.eql(false));"
                 ]
               }
             }
@@ -476,8 +987,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -487,14 +1004,16 @@
           }
         },
         {
-          "name": "5.3 Invalid QR Hash Negative Test",
+          "name": "6.4 Invalid / Tampered QR Scan Blocked (400/404)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Fake QR rejected with 404/400', () => pm.expect([400, 404]).to.include(pm.response.code));"
+                  "pm.test('Status code is 400 or 404', () => pm.expect([400, 404]).to.include(pm.response.code));",
+                  "const res = pm.response.json();",
+                  "pm.test('Tampered token rejected', () => pm.expect(res.success).to.eql(false));"
                 ]
               }
             }
@@ -502,12 +1021,18 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"qrToken\": \"FAKE_TAMPERED_TOKEN_99999\",\n  \"eventId\": \"{{eventId}}\"\n}"
+              "raw": "{\n  \"qrToken\": \"TAMPERED_QR_TOKEN_STRING_99999\",\n  \"eventId\": \"{{eventId}}\"\n}"
             },
             "url": "{{baseUrl}}/tickets/check-in"
           }
@@ -515,17 +1040,45 @@
       ]
     },
     {
-      "name": "6. Organizer Budget, Tasks & Analytics",
+      "name": "7. Organizer Budget, Tasks & Operations",
       "item": [
         {
-          "name": "6.1 Set Event Budget",
+          "name": "7.1 Get Event Budget Overview",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Budget configured 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Budget response returned', () => pm.expect(res.success).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/events/{{eventId}}/budget"
+          }
+        },
+        {
+          "name": "7.2 Set Event Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Total budget configured', () => pm.expect(res.data.budget.totalBudget).to.eql(180000));"
                 ]
               }
             }
@@ -533,25 +1086,35 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"totalBudget\": 100000,\n  \"expenseCategories\": [\n    { \"category\": \"Venue\", \"allocatedAmount\": 40000 },\n    { \"category\": \"Catering\", \"allocatedAmount\": 35000 },\n    { \"category\": \"Marketing\", \"allocatedAmount\": 25000 }\n  ]\n}"
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"totalBudget\": 180000,\n  \"expenseCategories\": [\n    {\n      \"category\": \"venue\",\n      \"allocatedAmount\": 70000\n    },\n    {\n      \"category\": \"catering\",\n      \"allocatedAmount\": 50000\n    },\n    {\n      \"category\": \"avAndTech\",\n      \"allocatedAmount\": 40000\n    },\n    {\n      \"category\": \"contingency\",\n      \"allocatedAmount\": 20000\n    }\n  ]\n}"
             },
             "url": "{{baseUrl}}/events/budget"
           }
         },
         {
-          "name": "6.2 Record Actual Expense",
+          "name": "7.3 Record Actual Expense",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Expense recorded 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Expense logged successfully', () => {",
+                  "  pm.expect(res.data.totalActualSpent).to.be.above(0);",
+                  "});"
                 ]
               }
             }
@@ -559,26 +1122,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"title\": \"Stage Lighting & Mic Setup\",\n  \"amount\": 18500,\n  \"category\": \"Venue\"\n}"
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"title\": \"Stage LED Screen & Sound System Rental\",\n  \"amount\": 35000,\n  \"category\": \"avAndTech\"\n}"
             },
             "url": "{{baseUrl}}/events/budget/expense"
           }
         },
         {
-          "name": "6.3 Create Task",
+          "name": "7.4 Create Operations Task",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Task created 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
                   "const res = pm.response.json();",
+                  "pm.test('Task ID returned', () => pm.expect(res.data.task._id).to.be.a('string'));",
                   "pm.environment.set('taskId', res.data.task._id);",
                   "pm.collectionVariables.set('taskId', res.data.task._id);"
                 ]
@@ -588,25 +1158,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"title\": \"Print QR Standees for Gate A\",\n  \"priority\": \"high\"\n}"
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"title\": \"Perform acoustic sound check and test wireless mics\",\n  \"priority\": \"high\",\n  \"deadline\": \"2026-12-14T17:00:00.000Z\"\n}"
             },
             "url": "{{baseUrl}}/tasks"
           }
         },
         {
-          "name": "6.4 Update Task Status to Completed",
+          "name": "7.5 Update Task Status to Completed",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Task updated 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Task status is completed', () => pm.expect(res.data.task.status).to.eql('completed'));"
                 ]
               }
             }
@@ -614,8 +1192,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{organizerToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -625,57 +1209,102 @@
           }
         },
         {
-          "name": "6.5 Fetch Event Analytics",
+          "name": "7.6 Organizer Views Event Registrations Roster",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Analytics fetched 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Registrations roster returned', () => pm.expect(res.data.registrations).to.be.an('array'));"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{organizerToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/registrations?eventId={{eventId}}"
+          }
+        },
+        {
+          "name": "7.7 Organizer Fetches Event Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Total registrations calculated', () => pm.expect(res.data.totalRegistrations).to.be.a('number'));",
+                  "pm.test('Checked-in count calculated', () => pm.expect(res.data.checkedInAttendance).to.be.a('number'));",
+                  "pm.test('No-show % calculated', () => pm.expect(res.data.noShowPercentage).to.be.a('number'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/admin/analytics/event/{{eventId}}"
           }
         }
       ]
     },
     {
-      "name": "7. Feedback, Notifications & Audit Logs",
+      "name": "8. Feedback, Notifications & Security Audit",
       "item": [
         {
-          "name": "7.1 Mark Event Completed (Organizer)",
+          "name": "8.1 Mark Event Completed (Organizer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Event marked completed 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Event status is completed', () => pm.expect(res.data.event.status).to.eql('completed'));"
                 ]
               }
             }
           ],
           "request": {
             "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{organizerToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{organizerToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/events/{{eventId}}/complete"
           }
         },
         {
-          "name": "7.2 Attendee Submits Event Feedback",
+          "name": "8.2 Attendee Submits Event Feedback",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Feedback submitted 201', () => pm.response.to.have.status(201));"
+                  "pm.test('Status code is 201 Created', () => pm.response.to.have.status(201));",
+                  "const res = pm.response.json();",
+                  "pm.test('Rating is 5 stars', () => pm.expect(res.data.feedback.rating).to.eql(5));",
+                  "pm.test('Sentiment is positive', () => pm.expect(res.data.feedback.sentiment).to.eql('positive'));"
                 ]
               }
             }
@@ -683,51 +1312,123 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{attendeeToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"rating\": 5,\n  \"review\": \"Super smooth QR check-in and great event management!\"\n}"
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"rating\": 5,\n  \"review\": \"Outstanding tech summit! Seamless QR entrance and inspiring talks.\"\n}"
             },
             "url": "{{baseUrl}}/feedback"
           }
         },
         {
-          "name": "7.3 Attendee Checks Notifications",
+          "name": "8.3 Public / Organizer Views Event Feedback",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Notifications fetched 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Feedback reviews returned', () => pm.expect(res.data.reviews).to.be.an('array'));"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{attendeeToken}}" }],
+            "header": [],
+            "url": "{{baseUrl}}/feedback/event/{{eventId}}"
+          }
+        },
+        {
+          "name": "8.4 Attendee Checks Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Notifications array returned', () => pm.expect(res.data.notifications).to.be.an('array'));",
+                  "if (res.data.notifications.length > 0) {",
+                  "  pm.environment.set('notificationId', res.data.notifications[0]._id);",
+                  "  pm.collectionVariables.set('notificationId', res.data.notifications[0]._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/notifications"
           }
         },
         {
-          "name": "7.4 Admin Views Security Audit Logs",
+          "name": "8.5 Attendee Marks All Notifications Read",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Audit logs fetched 200 OK', () => pm.response.to.have.status(200));"
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('All notifications marked read', () => pm.expect(res.success).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attendeeToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        },
+        {
+          "name": "8.6 Admin Views Security Audit Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', () => pm.response.to.have.status(200));",
+                  "const res = pm.response.json();",
+                  "pm.test('Audit logs list returned', () => pm.expect(res.data.auditLogs).to.be.an('array'));",
+                  "pm.test('Audit logs capture security events', () => pm.expect(res.data.auditLogs.length).to.be.above(0));"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/admin/audit-logs"
           }
         }
